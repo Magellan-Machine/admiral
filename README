@@ -1,0 +1,6 @@
+This is the control centre software used to interact with the sailing
+robots produced by the "Magellan Machine" project.
+
+Dependencies: Python, GTK+, Cairo
+
+Licence: GPLv3
