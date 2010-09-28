@@ -4,7 +4,7 @@ Created on 15 Sep 2010
 
 @author: Mac Ryan
 
-Common imports and constant definitions.
+@file: Common imports and constant definitions.
 '''
 
 # -----------------------------------------------------------------------------
@@ -25,12 +25,14 @@ SET_RUDDER                =  "R"
 SET_SAIL                  =  "S"
 
 # Values for pilot mode
-OFF               = 0
-AUTO              = 1
-RC                = 2
-COMPUTER          = 3
+OFF                       = 0
+AUTO                      = 1
+RC                        = 2
+COMPUTER                  = 3
 
 # Colours
-WATER                = "#009AD6"
-COMPUTER_CONTROLLED  = "#D70019"
+WATER                     = "#009AD6"
+COMPUTER_CONTROLLED       = "#D70019"
 
+# Others
+ON                        = 1

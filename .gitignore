@@ -1,0 +1,3 @@
+# ignore python bytecode files
+*.pyc
+raw_msg.log

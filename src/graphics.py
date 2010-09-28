@@ -4,7 +4,8 @@ Created on 15 Sep 2010
 
 @author: Mac Ryan
 
-Various classes needed to render the graphic part of the dashboard.
+@file: Various classes needed to render the graphic part of the dashboard when
+operating the software on a PC [On a free-runner thiese classes are unused].
 '''
 
 from lib import graphics

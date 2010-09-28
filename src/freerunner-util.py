@@ -3,7 +3,7 @@
 '''
 Created on 25 Sep 2010
 
-@author: mac
+@author: Mac Ryan
 
 @file:
 Provide a mini-touch-screen-friendly GUI for doing routine operations on the
@@ -22,14 +22,16 @@ class FreeRunnerControlPanel(object):
     def __init__(self):
         # Various
         self.fr = FreeRunner()
+        self.network_index = -1
 
         # GTK building
         builder = gtk.Builder()
-        builder.add_from_file("../data/freerunner-gui.xml")
+        builder.add_from_file("../data/freerunner-utility.xml")
         builder.connect_signals(self)
         self.pwr_toggle     = builder.get_object("pwr_toggle")
         self.usb_toggle     = builder.get_object("usb_toggle")
         self.op_in_progress = builder.get_object("op_in_progress")
+        self.connect_button = builder.get_object("connect")
         self.window         = builder.get_object("window")
         
         # Button extension and initialisation
@@ -45,7 +47,7 @@ class FreeRunnerControlPanel(object):
         # Showtime!
         self.window.maximize()
         self.window.show()
-            
+
     def toggler(self, widget):
         '''
         Helper method that connects a toggle button to a FreeRunner propriety
@@ -77,18 +79,17 @@ class FreeRunnerControlPanel(object):
     def on_power_toggle_toggled(self, widget):
         self.toggler(widget)
         
-    def on_git_pull_clicked(self, widget):
-        self.throbber(self.fr.git_pull)
-        print("\n")
-        print("+---------------------------------------------+")
-        print("| WAS THE PULL SUCCESSFUL? VERIFY IT ABOVE!!! |")
-        print("+---------------------------------------------+")
-        print("\n")
-        gtk.main_quit()
-        
-    def on_eth0_reset_clicked(self, widget):
-        self.throbber(self.fr.eth0_cycle)
-
+    def on_select_wifi_clicked(self, widget):
+        self.network_index = (self.network_index + 1) % len(self.fr.configured_networks)
+        network = self.fr.configured_networks[self.network_index]
+        widget.set_label("Connect to " + network +
+                         "\n(click to change)")
+        self.connect_button.set_sensitive(True)
+    
+    def on_connect_clicked(self, widget):
+        self.fr.connect_to_network(self.fr.configured_networks[self.network_index])
+        widget.set_sensitive(False)
+    
     def on_window_destroy(self, widget, data=None):
         gtk.main_quit()
 
