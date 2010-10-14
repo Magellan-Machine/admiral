@@ -10,6 +10,7 @@ Created on 25 Sep 2010
 import os
 import struct
 import dbus
+import platform
 from time import sleep
 from operator import mul
 from commons import *
@@ -38,6 +39,14 @@ class NotFreeRunnerSpecialProprietyError(Exception):
     def __str__(self):
         return repr(self.parameter)
 
+class EnvironmentIsNotFreeRunnerError(Exception):
+    
+    def __init__(self, value):
+        self.parameter = value
+      
+    def __str__(self):
+        return repr(self.parameter)
+
 class FreeRunner(object):
     
     '''
@@ -51,28 +60,39 @@ class FreeRunner(object):
     # CLASS ATTRIBUTES (bypass __getattr__ and __setattr__)
     # The property_handlers dictionary provides a method and the arguments
     # to properly handle the setting/getting of each property
-    bus = dbus.SystemBus()
-    dbus_wifi = dbus.Interface(bus.get_object("org.freesmartphone.odeviced", 
-        "/org/freesmartphone/Device/PowerControl/WiFi"), 
-        "org.freesmartphone.Resource")
-    dbus_usage = dbus.Interface(bus.get_object("org.freesmartphone.ousaged", 
-        "/org/freesmartphone/Usage"), "org.freesmartphone.Usage")
-    dbus_gps = dbus.Interface(bus.get_object("org.freesmartphone.ogpsd", 
-        "/org/freedesktop/Gypsy"), "org.freedesktop.Gypsy.Position")
-    property_handlers = {
-        'usb_mode'       : ('_file_handler', "/sys/devices/platform/s3c-ohci/usb_mode"),
-        'pwr_mode'       : ('_file_handler', "/sys/class/i2c-adapter/i2c-0/0-0073/neo1973-pm-host.0/hostmode"),
-        'gps_mode'       : ('_file_handler', "/sys/class/i2c-adapter/i2c-0/0-0073/pcf50633-regltr.7/neo1973-pm-gps.0/power_on"),
-        'bat_absorption' : ('_file_handler', "/sys/class/power_supply/battery/current_now"),
-        'bat_timeleft'   : ('_file_handler', "/sys/class/power_supply/battery/time_to_empty_now"),
-        'wifi'           : ('_wifi_handler',),
-        'accelerometer'  : ('_accel_handler',),
-    }
-    tmp = os.popen('ls /etc/wpa_supplicant/wpa_supplicant.conf.*').readlines()
-    configured_networks = [f.strip()[f.rfind('.')+1:] for f in tmp]
-    del tmp
-    del bus
+    if platform.machine() == "armv4tl":
+        bus = dbus.SystemBus()
+        dbus_wifi = dbus.Interface(bus.get_object("org.freesmartphone.odeviced", 
+            "/org/freesmartphone/Device/PowerControl/WiFi"), 
+            "org.freesmartphone.Resource")
+        dbus_usage = dbus.Interface(bus.get_object("org.freesmartphone.ousaged", 
+            "/org/freesmartphone/Usage"), "org.freesmartphone.Usage")
+        dbus_gps = dbus.Interface(bus.get_object("org.freesmartphone.ogpsd", 
+            "/org/freedesktop/Gypsy"), "org.freedesktop.Gypsy.Position")
+        property_handlers = {
+            'usb_mode'       : ('_file_handler', "/sys/devices/platform/s3c-ohci/usb_mode"),
+            'pwr_mode'       : ('_file_handler', "/sys/class/i2c-adapter/i2c-0/0-0073/neo1973-pm-host.0/hostmode"),
+            'gps_mode'       : ('_file_handler', "/sys/class/i2c-adapter/i2c-0/0-0073/pcf50633-regltr.7/neo1973-pm-gps.0/power_on"),
+            'bat_absorption' : ('_file_handler', "/sys/class/power_supply/battery/current_now"),
+            'bat_timeleft'   : ('_file_handler', "/sys/class/power_supply/battery/time_to_empty_now"),
+            'wifi'           : ('_wifi_handler',),
+            'accelerometer'  : ('_accel_handler',),
+        }
+        tmp = os.popen('ls /etc/wpa_supplicant/wpa_supplicant.conf.*').readlines()
+        configured_networks = [f.strip()[f.rfind('.')+1:] for f in tmp]
+        del tmp
+        del bus
+        running_on_freerunner = True
+    else:
+        running_on_freerunner = False
 
+    def __init__(self):
+        '''
+        Instantiation of an object is forbidden if we are not running on a FR"
+        '''
+        if self.running_on_freerunner == False:
+            raise EnvironmentIsNotFreeRunnerError(
+                  "The program is not running on a FreeRunner")
 
     def __getattr__(self, attribute):
         if attribute not in self.property_handlers.keys():

@@ -65,7 +65,7 @@ class ComputerControlPanel(GeneralControlPanel):
         # The following bit replace the placeholder drawing area with the scene
         tmp = self.builder.get_object("drawingarea")
         tmp.destroy()        
-        self.scene = Scene(boat)
+        self.scene = Scene(self.boat)
         box = self.builder.get_object("frame1")
         box.add(self.scene)
         

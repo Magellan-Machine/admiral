@@ -12,6 +12,27 @@ from math import degrees, atan2
 from time import sleep
 
 
+class MockSerial(object):
+    
+    '''
+    Mock class that implements some of the serial.Serial methods.
+    
+    This is used for testing the programme when the computer or the freerunner
+    are not connected to the Arduino board. 
+    '''
+    
+    def __init__(self):
+        print "Arduino device not found - starting MOCK SERIAL COMMUNICATION!"
+    
+    def write(self, string):
+        pass
+    
+    def read(self):
+        return ''
+    
+    def inWaiting(self):
+        return False
+
 class BareBoat(object):
     
     '''
@@ -22,8 +43,11 @@ class BareBoat(object):
     '''
     
     def __init__(self, port='/dev/ttyUSB0', rate=115200):
-        self.ser = serial.Serial(port, rate)
-        sleep(2)   # Arduino reset (use 120m resistor to prevent this)
+        try:
+            self.ser = serial.Serial(port, rate)
+            sleep(2)   # Arduino reset (use 120m resistor to prevent this)
+        except serial.SerialException:
+            self.ser = MockSerial()
         self.log_char_mapping = {       # values used to decode log strings
             "A" : "bat_absorption",
             "B" : "bat_timeleft",
