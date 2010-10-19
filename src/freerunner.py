@@ -15,6 +15,10 @@ from time import sleep
 from operator import mul
 from commons import *
 
+# -----------------------------------------------------------------------------
+# --- ERROR AND EXCEPTIONS DEFINITIONS
+# -----------------------------------------------------------------------------
+
 class ReadOnlyFreeRunnerProprietyError(Exception):
     
     def __init__(self, value):
@@ -46,6 +50,10 @@ class EnvironmentIsNotFreeRunnerError(Exception):
       
     def __str__(self):
         return repr(self.parameter)
+
+# -----------------------------------------------------------------------------
+# --- MAIN CLASS
+# -----------------------------------------------------------------------------
 
 class FreeRunner(object):
     
