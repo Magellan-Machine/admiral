@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.16"/>
   <!-- interface-naming-policy project-wide -->
@@ -27,26 +27,15 @@
           </packing>
         </child>
         <child>
-          <object class="GtkToggleButton" id="wireless_output">
-            <property name="label" translatable="yes">WIRELESS OUTPUT</property>
+          <object class="GtkToggleButton" id="wireless_bridge">
+            <property name="label" translatable="yes">WIRELESS BRIDGE</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="receives_default">True</property>
             <property name="focus_on_click">False</property>
             <signal name="toggled" handler="on_wireless_output_toggled"/>
           </object>
-        </child>
-        <child>
-          <object class="GtkToggleButton" id="wireless_input">
-            <property name="label" translatable="yes">WIRELESS INPUT</property>
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="receives_default">True</property>
-            <property name="focus_on_click">False</property>
-            <signal name="toggled" handler="on_wireless_input_toggled"/>
-          </object>
           <packing>
-            <property name="left_attach">1</property>
             <property name="right_attach">2</property>
           </packing>
         </child>

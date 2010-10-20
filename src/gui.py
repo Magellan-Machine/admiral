@@ -8,7 +8,7 @@ Created on 28 Sep 2010
 '''
 
 import gobject, gtk
-import boat
+import boat, wifibridge
 from commons import *
 from graphics import Scene
 from time import time
@@ -29,7 +29,7 @@ class GeneralControlPanel(object):
         self.builder.add_from_file(self.gui_file)
         self.builder.connect_signals(self)
         self.window = self.builder.get_object("window")
-        self.logfile = open('../data/raw_msg.log', 'a', -1)
+        self.logfile = open('../data/raw_msg.log', 'a', 1)
         self.last_logged_msg = None;
         
     def do_log(self):
@@ -60,6 +60,9 @@ class ComputerControlPanel(GeneralControlPanel):
         self.rudder_adjustment = self.builder.get_object("rudder_adjustment")
         self.sail_adjustment = self.builder.get_object("sail_winch_adjustment")
         self.logging_adjustment = self.builder.get_object("logging_interval_adjustment")
+        self.remote_uri_dialogue = self.builder.get_object("remote_boat_win_dialogue")
+        self.remote_ip_widget = self.builder.get_object("remote_ip")
+        self.remote_port_widget = self.builder.get_object("remote_port")
         
         # The following bit replace the placeholder drawing area with the scene
         tmp = self.builder.get_object("drawingarea")
@@ -72,7 +75,9 @@ class ComputerControlPanel(GeneralControlPanel):
         gobject.timeout_add(30, self.scene.redraw)        
         self.on_ms_radio_toggled(None) # Initialise the values
 
-        self.window.set_size_request(640,480)
+        # Other varaibles
+        self.logging_mode = False
+
         self.window.show_all()
     
     def serial_monitor(self):
@@ -82,6 +87,8 @@ class ComputerControlPanel(GeneralControlPanel):
         if self.boat.pilot_mode != COMPUTER:   # Avoid infinite loop
             self.sail_adjustment.set_value(self.boat.sail_position)
             self.rudder_adjustment.set_value(self.boat.rudder_position)
+        if self.logging_mode == True:
+            self.do_log()
         return True    #Necessary to keep it being scheduled by GObject
 
     def on_command_button_clicked(self, widget, data=None):
@@ -140,7 +147,25 @@ class ComputerControlPanel(GeneralControlPanel):
             return # Avoid an infinite loop
         self.boat.send_command(SET_RUDDER, widget.get_value())
 
+    def on_logg_on_off_button_toggled(self, widget, data=None):
+        state = widget.get_active()
+        self.logging_mode = state
+        widget.set_label("Logging in ON" if state else "Logging is OFF")
 
+    def on_connect_remote_button_clicked(self, widget, data=None):
+        if self.remote_ip_widget.get_text() == '':
+            self.remote_ip_widget.set_text('192.168.1.34')
+        if self.remote_port_widget.get_text() == '':
+            self.remote_port_widget.set_text('5000')
+        self.remote_uri_dialogue.show()
+        
+    def on_remote_boat_win_dialogue_delete_event(self, widget, data=None):
+        widget.hide_on_delete()
+        return True
+        
+    def on_boat_uri_button_clicked(self, widget, data=None):
+        print self.remote_ip_widget.get_text(), self.remote_port_widget.get_text()
+        
 class FreeRunnerControlPanel(GeneralControlPanel):
 
     def __init__(self):
@@ -154,6 +179,7 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         self.active_systems = set() 
         self.run_mode = False
         self.logging_mode = False
+        self.wifi = None
         gobject.timeout_add(10, self.loop)
         self.window.maximize()
         self.window.show_all()
@@ -162,6 +188,8 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         '''
         Executes callbacks if the program is in runmode (button on the GUI)
         '''
+        if self.wifi:
+            pass
         if self.run_mode == True:
             msg = self.boat.poll_message(self.active_systems)
             if self.logging_mode:
@@ -197,11 +225,11 @@ class FreeRunnerControlPanel(GeneralControlPanel):
     def on_wireless_watchdog_toggled(self, widget):
         self._subsystem('watchdog', widget)
 
-    def on_wireless_input_toggled(self, widget):
-        self._subsystem('wifi_in', widget)
-
-    def on_wireless_output_toggled(self, widget):
-        self._subsystem('wifi_out', widget)
+    def on_wireless_bridge_toggled(self, widget):
+        if widget.get_active():
+            self.wifi = wifibridge.WifiBridge()
+        else:
+            self.wifi = None
 
     def on_log_data_toggled(self, widget):
         self.logging_mode = widget.get_active()
