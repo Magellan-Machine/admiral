@@ -9,7 +9,7 @@ Created on 28 Sep 2010
 import serial
 from commons import *
 from math import degrees, atan2
-from time import sleep
+from time import sleep, time
 
 
 class MockSerial(object):
@@ -23,15 +23,88 @@ class MockSerial(object):
     
     def __init__(self):
         print "Arduino device not found - starting MOCK SERIAL COMMUNICATION!"
+        self.values = {
+            "I" : 0,
+            "H" : 0,
+            "P" : OFF,
+            "R" : 0,
+            "S" : 0,
+            "T" : 0,
+            "W" : 0,
+
+            "n" : 0,     # TODO: Remove when accel on arduino
+            "x" : 100,         # TODO: Remove when accel on arduino
+            "y" : 0,         # TODO: Remove when accel on arduino
+            "z" : 0,         # TODO: Remove when accel on arduino
+        }
+        self.steps = {
+            'R' : 5,
+            'S' : 5,
+            'W' : 4,
+            'x' : 3,
+            'y' : 3,
+        }
+        self.last_inwaiting = 0
     
+    def _step(self, key, lo, hi, fish):
+        '''Rotate or swing arduino values progressively.
+        
+        "key"         is the key of the value to alter [as in arduino messages]
+        "lo" and "hi" are the boundaries of the movement
+        "fish"        indicate if the direction of movement must revert once a
+                      limit has been hit
+        '''
+        assert lo < hi
+        value = self.values[key]
+        value += self.steps[key]
+        if value < lo:
+            value = lo
+            if fish:
+                self.steps[key] *= -1
+        if value > hi:
+            value = hi
+            if fish:
+                self.steps[key] *= -1
+        if not fish:
+            assert lo == 0
+            value %= hi
+        return value
+
     def write(self, string):
-        pass
+        '''
+        Strings passed to this method are in the form "X value".
+        '''
+        k, v = string.split()
+        v = int(float(v))
+        if k == 'I' and v < 0:     # This needs processing as on the arduino!
+            v *= -0.001
+        self.values[k] = v
     
-    def read(self):
-        return ''
+    def readline(self):
+        '''
+        Returns an arduino-like log message.
+        
+        Values are either echoed from last input, or simulated pseudo-randomly.
+        '''
+        if self.values['P'] == AUTO:
+            self.values['R'] = self._step('R', -100, 100, True)
+            self.values['S'] = self._step('S', 0, 100, True)
+            self.values['W'] = self._step('W', 0, 360, False)
+            self.values['x'] = self._step('x', -100, 100, True)
+            self.values['y'] = self._step('y', -100, 100, True)
+            self.values['n'] = int(
+                (degrees(atan2(self.values['x'], self.values['y'])) + 270) % 360)
+        self.values['T'] = int(time()*1000)
+        msg = '!'
+        for k, v in self.values.items():
+            msg += k + ':' + str(v) + ' '
+        self.last_inwaiting = time()
+        return msg + "\r"
     
     def inWaiting(self):
-        return False
+        if self.values['I'] == 0:
+            return False
+        return True if (time() - self.last_inwaiting) > self.values['I'] else False
 
 class BareBoat(object):
     
@@ -59,6 +132,8 @@ class BareBoat(object):
             "T" : "last_msg_millis",
             "X" : "longitude",
             "Y" : "longitude",
+            "W" : "relative_wind",
+            "I" : "log_signal_interval",
 
             "n" : "magnetic_north",     # TODO: Remove when accel on arduino
             "x" : "magnetic_x",         # TODO: Remove when accel on arduino

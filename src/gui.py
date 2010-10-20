@@ -36,7 +36,6 @@ class GeneralControlPanel(object):
         if self.boat.last_msg != self.last_logged_msg:
             self.logfile.write(str(time()) + " " + self.boat.last_msg + "\n")
             self.last_logged_msg = self.boat.last_msg
-#            print self.last_logged_msg
     
     def on_window_destroy(self, widget, data=None):
         '''
