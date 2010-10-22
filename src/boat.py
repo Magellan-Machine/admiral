@@ -13,7 +13,7 @@ from time import sleep, time
 
 
 class MockSerial(object):
-    
+
     '''
     Mock class that implements some of the serial.Serial methods.
     

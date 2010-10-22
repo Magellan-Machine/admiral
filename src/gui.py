@@ -164,7 +164,11 @@ class ComputerControlPanel(GeneralControlPanel):
         return True
         
     def on_boat_uri_button_clicked(self, widget, data=None):
-        print self.remote_ip_widget.get_text(), self.remote_port_widget.get_text()
+        self.wifi = wifibridge.WifiBridge()
+        host = self.remote_ip_widget.get_text()
+        port = int(self.remote_port_widget.get_text())
+        if True == self.wifi.request_bind((host, port)):
+            self.remote_uri_dialogue.hide()
         
 class FreeRunnerControlPanel(GeneralControlPanel):
 
@@ -189,7 +193,10 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         Executes callbacks if the program is in runmode (button on the GUI)
         '''
         if self.wifi:
-            pass
+            if self.wifi.bond_to:
+                pass
+            else:
+                self.wifi.accept_bind()
         if self.run_mode == True:
             msg = self.boat.poll_message(self.active_systems)
             if self.logging_mode:
