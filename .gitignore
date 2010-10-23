@@ -1,3 +1,4 @@
-# ignore python bytecode files
+.*
+*.sh
 *.pyc
 raw_msg.log

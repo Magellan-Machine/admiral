@@ -66,13 +66,13 @@ class ComputerControlPanel(GeneralControlPanel):
         
         # The following bit replace the placeholder drawing area with the scene
         tmp = self.builder.get_object("drawingarea")
-        tmp.destroy()        
+        tmp.destroy()
         self.scene = Scene(self.boat)
         box = self.builder.get_object("frame1")
         box.add(self.scene)
         
         gobject.timeout_add(10, self.serial_monitor)
-        gobject.timeout_add(30, self.scene.redraw)        
+        gobject.timeout_add(30, self.scene.redraw)
         self.on_ms_radio_toggled(None) # Initialise the values
 
         # Other varaibles
@@ -164,11 +164,16 @@ class ComputerControlPanel(GeneralControlPanel):
         return True
         
     def on_boat_uri_button_clicked(self, widget, data=None):
-        self.wifi = wifibridge.WifiBridge()
         host = self.remote_ip_widget.get_text()
         port = int(self.remote_port_widget.get_text())
-        if True == self.wifi.request_bind((host, port)):
+        try:
+            remote_boat = boat.RemoteBoat((host, port))
+        except Exception as e:
+            print "Failed to connect: ", e
+        else:
+            self.boat = remote_boat
             self.remote_uri_dialogue.hide()
+            self.scene.change_boat(self.boat)
         
 class FreeRunnerControlPanel(GeneralControlPanel):
 
@@ -192,13 +197,16 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         '''
         Executes callbacks if the program is in runmode (button on the GUI)
         '''
-        if self.wifi:
-            if self.wifi.bond_to:
-                pass
-            else:
-                self.wifi.accept_bind()
         if self.run_mode == True:
-            msg = self.boat.poll_message(self.active_systems)
+            if self.wifi:
+                wifi_msg = self.wifi.read()
+                if wifi_msg:
+                    self.boat.send_command(wifi_msg) 
+                if self.wifi.remote_address:
+                    if self.last_sent_wifi_message != self.boat.last_msg:
+                        self.wifi.write(self.boat.last_msg)
+                        self.last_sent_wifi_message = self.boat.last_msg
+            self.boat.poll_message(self.active_systems)
             if self.logging_mode:
                 self.do_log()
         return True    #Necessary to keep it being scheduled by GObject
@@ -235,6 +243,7 @@ class FreeRunnerControlPanel(GeneralControlPanel):
     def on_wireless_bridge_toggled(self, widget):
         if widget.get_active():
             self.wifi = wifibridge.WifiBridge()
+            self.last_sent_wifi_message = ''
         else:
             self.wifi = None
 

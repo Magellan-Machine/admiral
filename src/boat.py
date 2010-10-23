@@ -10,7 +10,7 @@ import serial
 from commons import *
 from math import degrees, atan2
 from time import sleep, time
-
+import wifibridge
 
 class MockSerial(object):
 
@@ -32,8 +32,8 @@ class MockSerial(object):
             "T" : 0,
             "W" : 0,
 
-            "n" : 0,     # TODO: Remove when accel on arduino
-            "x" : 100,         # TODO: Remove when accel on arduino
+            "n" : 0,         # TODO: Remove when accel on arduino
+            "x" : 100,       # TODO: Remove when accel on arduino
             "y" : 0,         # TODO: Remove when accel on arduino
             "z" : 0,         # TODO: Remove when accel on arduino
         }
@@ -84,7 +84,8 @@ class MockSerial(object):
         '''
         Returns an arduino-like log message.
         
-        Values are either echoed from last input, or simulated pseudo-randomly.
+        Values are either echoed from last input, or simulated in a way that
+        each value swipe across its entire range.
         '''
         if self.values['P'] == AUTO:
             self.values['R'] = self._step('R', -100, 100, True)
@@ -106,21 +107,14 @@ class MockSerial(object):
             return False
         return True if (time() - self.last_inwaiting) > self.values['I'] else False
 
-class BareBoat(object):
+
+class Boat(object):
     
     '''
-    BareBoat is the Arduino only boat.
-    
-    It is typically used by the FreeRunner, but can also used by a normal
-    client. Provides access to all the Arduino-controlled devices and data.
+    "Abstract class" that defines the interface of boats objects.
     '''
     
-    def __init__(self, port='/dev/ttyUSB0', rate=115200):
-        try:
-            self.ser = serial.Serial(port, rate)
-            sleep(2)   # Arduino reset (use 120m resistor to prevent this)
-        except serial.SerialException:
-            self.ser = MockSerial()
+    def __init__(self):
         self.log_char_mapping = {       # values used to decode log strings
             "A" : "bat_absorption",
             "B" : "bat_timeleft",
@@ -145,17 +139,50 @@ class BareBoat(object):
         self.coordinates = None
         self.last_ping_time = 0
         self.last_msg = ''
+
+    def _format_command(self, *args):
+        '''
+        Format the command in a target-compliant way.
+        '''
+        return ' '.join(map(str, args)) + "\r"
     
+    def parse_log_data(self, data):
+        '''
+        Update internal data on the boat
+        '''
+        for value in data.split():
+            key, value = value.split(":")
+            setattr(self, self.log_char_mapping[key], int(float(value)))
+        self.last_ping_time = time()
+
+
+class BareBoat(Boat):
+    
+    '''
+    BareBoat is the Arduino only boat.
+    
+    It is typically used by the FreeRunner, but can also used by a normal
+    client. Provides access to all the Arduino-controlled devices and data.
+    '''
+    
+    def __init__(self, port='/dev/ttyUSB0', rate=115200):
+        super(BareBoat, self).__init__()
+        try:
+            self.ser = serial.Serial(port, rate)
+            sleep(2)   # Arduino reset (use 120m resistor to prevent this)
+        except serial.SerialException:
+            self.ser = MockSerial()
+            
     def send_command(self, *args):
         '''
-        Send a command to the ship.
+        Send a command to the boat.
         
-        Commands are a sequence of integers, the 
-        first integer represents the command (see the constant section of this
-        file), other parameters can represent different values (such intervals
-        in seconds, heading in degrees, etc...).
+        Commands are a sequence of integers, the first integer represents the 
+        command (see the constant section of this file), other parameters can 
+        represent different values (such intervals in seconds, heading in 
+        degrees, etc...).
         '''
-        self.ser.write(' '.join(map(str, args)) + "\r")
+        self.ser.write(self._format_command(*args))
         
     def poll_message(self, auto_parse=True):
         '''
@@ -178,15 +205,6 @@ class BareBoat(object):
             self.parse_log_data(msg[1:])
         self.last_msg = msg
         return msg
-
-    def parse_log_data(self, data):
-        '''
-        Update internal data on the boat
-        '''
-        for value in data.split():
-            key, value = value.split(":")
-            setattr(self, self.log_char_mapping[key], int(float(value)))
-        self.last_ping_time = time()
 
 
 class FreeBoat(BareBoat):
@@ -241,7 +259,6 @@ class FreeBoat(BareBoat):
     def _compute_north_with_acc_data(self):
         '''
         Compensate 3D magnetomer reading for tilt of the boat, via accelerometer.
-        
         '''
         def normalise(vector):    #max length of a component = 1000
             ratio = 1000.0/max([abs(c) for c in vector])
@@ -260,4 +277,27 @@ class FreeBoat(BareBoat):
         north = cross_product(a_vector, east)
         print "A:", a_vector, "   M:", m_vector, "   E:", east, "   N:", int(vector_to_deg(north)) 
         return int(vector_to_deg(north))
+    
+class RemoteBoat(Boat):
+    
+    '''
+    Wireless wrapper for any remote boat that is connected via wireless.
+    '''
+    
+    def __init__(self, address):
+        super(RemoteBoat, self).__init__()
+        self.wifi = wifibridge.WifiBridge(address)
+        self.send_command(SET_LOG_INTERVAL, 0)
+        
+    def poll_message(self, auto_parse=True):
+        msg = self.wifi.read()
+        if msg == None:
+            return
+        if msg[0] == '!' and auto_parse == True:
+            self.parse_log_data(msg[1:])
+        self.last_msg = msg
+        return msg
+    
+    def send_command(self, *args):
+        self.wifi.write(self._format_command(*args))
     

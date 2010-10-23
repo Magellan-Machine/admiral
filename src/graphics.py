@@ -38,6 +38,12 @@ class Scene(graphics.Scene):
         self.sail_sprite = SailSprite()
         self.add_child(self.sail_sprite)
         self.connect("on-enter-frame", self.on_enter_frame)
+        
+    def change_boat(self, boat):
+        '''
+        Hot-swap the boat being rendered on screen. 
+        '''
+        self.boat = boat
 
     def on_enter_frame(self, scene, context):
         g = graphics.Graphics(context)
