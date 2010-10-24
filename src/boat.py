@@ -137,7 +137,7 @@ class Boat(object):
         for a in self.log_char_mapping.itervalues():
             setattr(self, a, 0)
         self.coordinates = None
-        self.last_ping_time = 0
+        self.last_log_message_time = 0
         self.last_msg = ''
 
     def _format_command(self, *args):
@@ -153,7 +153,7 @@ class Boat(object):
         for value in data.split():
             key, value = value.split(":")
             setattr(self, self.log_char_mapping[key], int(float(value)))
-        self.last_ping_time = time()
+        self.last_log_message_time = time()
 
 
 class BareBoat(Boat):
@@ -241,16 +241,9 @@ class FreeBoat(BareBoat):
                 lat, lon = self.fr.get_gps()
                 msg += " Y:" + str(lat)
                 msg += " X:" + str(lon)
-            if 'watchdog' in subsystems:
-                pass
-            if 'wifi_in' in subsystems:
-                pass
-            if 'wifi_out' in subsystems:
-                pass
-            if 'file_logging' in subsystems:
-                pass
-            msg += " A:" + str(self.fr.bat_absorption)
-            msg += " B:" + str(self.fr.bat_timeleft)
+            if 'battery_info' in subsystems:
+                msg += " A:" + str(self.fr.bat_absorption)
+                msg += " B:" + str(self.fr.bat_timeleft)
             if auto_parse == True:
                 self.parse_log_data(msg[1:])
             self.last_msg = msg

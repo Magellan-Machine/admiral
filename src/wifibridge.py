@@ -18,6 +18,7 @@ class WifiBridge(object):
         self.socket.bind(("", WIFI_PORT))
         self.socket.setblocking(0)
         self.remote_address = remote_address
+        self.last_ping_request_time = 0
 
     def read(self):
         '''
@@ -33,13 +34,26 @@ class WifiBridge(object):
                 msg = self.socket.recv(1024)
             else:
                 msg, self.remote_address = self.socket.recvfrom(1024)
+                self.last_wifi_in_time = time()  # first msg ever received
         except socket.error:
             return None
         else:
-            return msg
+            self.last_wifi_in_time = time()
+            if msg == 'ping':
+                self.write('pong')
+                return None
+            if msg == 'pong':
+                return None
+            else:
+                return msg    
     
     def write(self, data, server=None):
         if server == None:
             server = self.remote_address
         assert server != None
         self.socket.sendto(data, server)
+
+    def ping(self):
+        if time() - self.last_ping_request_time > 0.5: # prevent flooding
+            self.write('ping')
+            self.last_ping_request_time = time()

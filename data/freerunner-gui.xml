@@ -22,8 +22,8 @@
           <packing>
             <property name="left_attach">1</property>
             <property name="right_attach">2</property>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
           </packing>
         </child>
         <child>
@@ -35,9 +35,6 @@
             <property name="focus_on_click">False</property>
             <signal name="toggled" handler="on_wireless_bridge_toggled"/>
           </object>
-          <packing>
-            <property name="right_attach">2</property>
-          </packing>
         </child>
         <child>
           <object class="GtkToggleButton" id="wireless_watchdog">
@@ -49,8 +46,8 @@
             <signal name="toggled" handler="on_wireless_watchdog_toggled"/>
           </object>
           <packing>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
+            <property name="left_attach">1</property>
+            <property name="right_attach">2</property>
           </packing>
         </child>
         <child>
@@ -64,8 +61,8 @@ ACCELEROMETER</property>
             <signal name="toggled" handler="on_use_accelerometer_toggled"/>
           </object>
           <packing>
-            <property name="top_attach">2</property>
-            <property name="bottom_attach">3</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
           </packing>
         </child>
         <child>
@@ -117,6 +114,21 @@ GPS</property>
           <packing>
             <property name="left_attach">1</property>
             <property name="right_attach">2</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToggleButton" id="battery_info">
+            <property name="label" translatable="yes">SEND BATTERY AND
+CURRENT INFORMATION</property>
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="receives_default">True</property>
+            <property name="focus_on_click">False</property>
+            <signal name="toggled" handler="on_battery_info_toggled"/>
+          </object>
+          <packing>
             <property name="top_attach">2</property>
             <property name="bottom_attach">3</property>
           </packing>

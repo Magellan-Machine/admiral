@@ -36,5 +36,6 @@ COMPUTER_CONTROLLED       = "#D70019"
 
 # Others
 ON                        = 1
-WIFI_TIMEOUT              = 2000   #in milliseconds
+WIFI_MAYBE_LOST           = 5      # in seconds
+WIFI_CONSIDER_LOST        = 10     # in seconds
 WIFI_PORT                 = 5000

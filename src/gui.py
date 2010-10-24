@@ -63,6 +63,7 @@ class ComputerControlPanel(GeneralControlPanel):
         self.remote_uri_dialogue = self.builder.get_object("remote_boat_win_dialogue")
         self.remote_ip_widget = self.builder.get_object("remote_ip")
         self.remote_port_widget = self.builder.get_object("remote_port")
+        self.about_dialogue = self.builder.get_object("about_dialogue")
         
         # The following bit replace the placeholder drawing area with the scene
         tmp = self.builder.get_object("drawingarea")
@@ -154,7 +155,7 @@ class ComputerControlPanel(GeneralControlPanel):
 
     def on_connect_remote_button_clicked(self, widget, data=None):
         if self.remote_ip_widget.get_text() == '':
-            self.remote_ip_widget.set_text('192.168.1.34')
+            self.remote_ip_widget.set_text('192.168.1.35')
         if self.remote_port_widget.get_text() == '':
             self.remote_port_widget.set_text('5000')
         self.remote_uri_dialogue.show()
@@ -175,6 +176,28 @@ class ComputerControlPanel(GeneralControlPanel):
             self.remote_uri_dialogue.hide()
             self.scene.change_boat(self.boat)
         
+    def on_disconnect_menu_item_activate(self, widget, data=None):
+        print "disconnect"
+        
+    def on_log_activate_item(self, widget, data=None):
+        print "log"
+        
+    def on_wifi_activate_item(self, widget, data=None):
+        print "wifi"
+        
+    def on_serial_activate_item(self, widget, data=None):
+        print "serial"
+        
+    def on_about_menu_item_activate(self, widget, data=None):
+        self.about_dialogue.show()
+        
+    def on_about_dialogue_delete_event(self, widget, data=None):
+        self.about_dialogue.hide()
+        return True
+
+    def on_about_dialogue_response(self, widget, data=None):
+        self.about_dialogue.hide()
+        
 class FreeRunnerControlPanel(GeneralControlPanel):
 
     def __init__(self):
@@ -189,6 +212,7 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         self.run_mode = False
         self.logging_mode = False
         self.wifi = None
+        self.watchdog = False
         gobject.timeout_add(10, self.loop)
         self.window.maximize()
         self.window.show_all()
@@ -198,6 +222,7 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         Executes callbacks if the program is in runmode (button on the GUI)
         '''
         if self.run_mode == True:
+            # WiFi ops (including Watchdog) 
             if self.wifi:
                 wifi_msg = self.wifi.read()
                 if wifi_msg:
@@ -206,9 +231,17 @@ class FreeRunnerControlPanel(GeneralControlPanel):
                     if self.last_sent_wifi_message != self.boat.last_msg:
                         self.wifi.write(self.boat.last_msg)
                         self.last_sent_wifi_message = self.boat.last_msg
-            self.boat.poll_message(self.active_systems)
+                    elapsed = time() - self.wifi.last_wifi_in_time
+                    if self.watchdog and WIFI_MAYBE_LOST < elapsed:
+                        self.wifi.ping()
+                        if WIFI_CONSIDER_LOST < elapsed:
+                            self.boat.send_command(SET_PILOT_MODE, RC)
+                            self.wifi = None
+            # Logging ops
             if self.logging_mode:
                 self.do_log()
+            # Pll message
+            self.boat.poll_message(self.active_systems)
         return True    #Necessary to keep it being scheduled by GObject
 
     def _subsystem(self, subsystem, widget):
@@ -237,8 +270,11 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         else:
             self.fr.gps_down()
 
+    def on_battery_info_toggled(self, widget):
+        self._subsystem('battery_info', widget)
+        
     def on_wireless_watchdog_toggled(self, widget):
-        self._subsystem('watchdog', widget)
+        self.watchdog = True if widget.get_active() else False
 
     def on_wireless_bridge_toggled(self, widget):
         if widget.get_active():

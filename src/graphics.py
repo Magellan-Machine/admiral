@@ -58,7 +58,7 @@ class Scene(graphics.Scene):
         self.rudder_sprite.my_color, self.sail_sprite.my_color = \
             (COMPUTER_CONTROLLED if self.boat.pilot_mode == COMPUTER else "#000000",) * 2
         self.sail_sprite.my_opacity = self.boat.sail_position / 100.0
-        delta = time() - self.boat.last_ping_time
+        delta = time() - self.boat.last_log_message_time
         self.pingbeat_sprite.alpha = 0 if delta > 1 else 1 - delta % 1
 
     def redraw(self):
