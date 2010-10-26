@@ -133,6 +133,15 @@ class Boat(object):
             "x" : "magnetic_x",         # TODO: Remove when accel on arduino
             "y" : "magnetic_y",         # TODO: Remove when accel on arduino
             "z" : "magnetic_z",         # TODO: Remove when accel on arduino
+            
+            "a" : "accelerometer_x",
+            "b" : "accelerometer_y",
+            "c" : "accelerometer_z",
+            
+            "u" : "arduino_used_voltage",
+            "i" : "arduino_used_current",
+            "p" : "arduino_used_power",
+            "e" : "arduino_energy_counter"
         }
         for a in self.log_char_mapping.itervalues():
             setattr(self, a, 0)
@@ -154,6 +163,24 @@ class Boat(object):
             key, value = value.split(":")
             setattr(self, self.log_char_mapping[key], int(float(value)))
         self.last_log_message_time = time()
+        
+    def get_magnetic_vector(self):
+        '''
+        Helper funtion to get the 3d magnetometer reading as a tuple.
+        '''
+        # TODO: normalisation here?!?
+        vector = (self.magnetic_x, self.magnetic_y, self.magnetic_z)
+        if not 0 in vector:
+            ratio = 1000.0/max([abs(c) for c in vector])
+            return [int(c*ratio) for c in vector]
+        else:
+            return (0, 0, 0)
+
+    def get_gravity_vector(self):
+        '''
+        Helper funtion to get the 3d accelerometer reading as a tuple.
+        '''
+        return (self.accelerometer_x, self.accelerometer_y, self.accelerometer_z)
 
 
 class BareBoat(Boat):
@@ -237,6 +264,9 @@ class FreeBoat(BareBoat):
             if 'accelerometer' in subsystems:
                 self.north = self._compute_north_with_acc_data()
                 msg += " N:" + str(self.north)
+                msg += " a:" + str(self.accelerometer_x)
+                msg += " b:" + str(self.accelerometer_y)
+                msg += " c:" + str(self.accelerometer_z)
             if 'GPS' in subsystems:
                 lat, lon = self.fr.get_gps()
                 msg += " Y:" + str(lat)
@@ -256,6 +286,8 @@ class FreeBoat(BareBoat):
         def normalise(vector):    #max length of a component = 1000
             ratio = 1000.0/max([abs(c) for c in vector])
             return [int(c*ratio) for c in vector]
+        def translate_acc_axis(vector): # X and Y need 180 degrees rotation
+            return (vector[0], -1 * vector[1], vector[2])
         def cross_product(a, b):
             x = a[1]*b[2]-a[2]*b[1]
             y = a[2]*b[0]-a[0]*b[2]
@@ -263,12 +295,13 @@ class FreeBoat(BareBoat):
             return normalise((x, y, z))
         def vector_to_deg(vector):
             x, y, z = vector
-            return degrees(atan2(x, y)) % 360
-        a_vector = normalise(self.fr.accelerometer)
+            # compensate orientation and negative values
+            return (degrees(atan2(x, y)) + 270) % 360  
+        a_vector = normalise(translate_acc_axis(self.fr.accelerometer))
+        self.accelerometer_x, self.accelerometer_y, self.accelerometer_z = a_vector
         m_vector = normalise((self.magnetic_x, self.magnetic_y, self.magnetic_z))
         east = cross_product(a_vector, m_vector)
-        north = cross_product(a_vector, east)
-        print "A:", a_vector, "   M:", m_vector, "   E:", east, "   N:", int(vector_to_deg(north)) 
+        north = cross_product(east, a_vector)
         return int(vector_to_deg(north))
     
 class RemoteBoat(Boat):

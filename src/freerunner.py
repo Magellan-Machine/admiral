@@ -152,13 +152,14 @@ class FreeRunner(object):
         else:
             result = [None]*3
             with open("/dev/input/event3", "rb") as acc:
+                acc.read(64) # flushes old data [DO NOT REMOVE!!]
                 while True:
                     event = acc.read(16)
-                    (t1, t2, type, code, value) = struct.unpack('iihhi', event)        
+                    t1, t2, type, code, value = struct.unpack('iihhi', event)        
                     if type == 2 or type == 3:
                         result[code] = value    # codes for x,y,z are 0,1,2...
                     if type == 0 and code == 0 and None not in result:
-                        return map(mul, result, (-1, 1, 1)) # X axis need swap
+                        return result
     
     def connect_to_network(self, network):
         '''
