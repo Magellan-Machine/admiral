@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Created on 28 Sep 2010
 
@@ -24,6 +25,7 @@ class MockSerial(object):
     def __init__(self):
         print "Arduino device not found - starting MOCK SERIAL COMMUNICATION!"
         self.values = {
+            "B" : 600,
             "I" : 0,
             "H" : 0,
             "P" : OFF,
@@ -38,6 +40,7 @@ class MockSerial(object):
             "z" : 0,         # TODO: Remove when accel on arduino
         }
         self.steps = {
+            'B' : 1,
             'R' : 5,
             'S' : 5,
             'W' : 4,
@@ -89,6 +92,7 @@ class MockSerial(object):
         each value swipe across its entire range.
         '''
         if self.values['P'] == AUTO:
+            self.values['B'] = self._step('B', 580, 620, True)
             self.values['R'] = self._step('R', -100, 100, True)
             self.values['S'] = self._step('S', 0, 100, True)
             self.values['W'] = self._step('W', 0, 360, False)
@@ -117,35 +121,35 @@ class Boat(object):
     
     def __init__(self):
         self.log_char_mapping = {       # values used to decode log strings
-            "A" : "bat_absorption",
-            "B" : "bat_timeleft",
-            "H" : "desired_heading",
-            "N" : "north",
-            "P" : "pilot_mode",
-            "R" : "rudder_position",
-            "S" : "sail_position",
-            "T" : "last_msg_millis",
-            "X" : "longitude",
-            "Y" : "longitude",
-            "W" : "relative_wind",
-            "I" : "log_signal_interval",
+            'A' : ('bat_absorption', 'µA'),
+            'B' : ('bat_timeleft', 's'),
+            'H' : ('desired_heading', '°'),
+            'N' : ('north', '°'),
+            'P' : ('pilot_mode', 'CODE'),
+            'R' : ('rudder_position', '%'),
+            'S' : ('sail_position', '%'),
+            'T' : ('last_msg_millis', 'ms'),
+            'X' : ('longitude', '°'),
+            'Y' : ('longitude', '°'),
+            'W' : ('relative_wind', '°'),
+            'I' : ('log_signal_interval', 'ms'),
 
-            "n" : "magnetic_north",     # TODO: Remove when accel on arduino
-            "x" : "magnetic_x",         # TODO: Remove when accel on arduino
-            "y" : "magnetic_y",         # TODO: Remove when accel on arduino
-            "z" : "magnetic_z",         # TODO: Remove when accel on arduino
+            'n' : ('magnetic_north', '°'),     # TODO: Remove when accel on arduino
+            'x' : ('magnetic_x', '-'),         # TODO: Remove when accel on arduino
+            'y' : ('magnetic_y', '-'),         # TODO: Remove when accel on arduino
+            'z' : ('magnetic_z', '-'),         # TODO: Remove when accel on arduino
             
-            "a" : "accelerometer_x",
-            "b" : "accelerometer_y",
-            "c" : "accelerometer_z",
+            'a' : ('accelerometer_x', '-'),    # TODO: Remove when accel on arduino
+            'b' : ('accelerometer_y', '-'),    # TODO: Remove when accel on arduino
+            'c' : ('accelerometer_z', '-'),    # TODO: Remove when accel on arduino
             
-            "u" : "arduino_used_voltage",
-            "i" : "arduino_used_current",
-            "p" : "arduino_used_power",
-            "e" : "arduino_energy_counter"
+            'u' : ('ardu_used_voltage', '?'),
+            'i' : ('ardu_used_current', '?'),
+            'p' : ('ardu_used_power', '?'),
+            'e' : ('ardu_energy_counter', '?'),
         }
         for a in self.log_char_mapping.itervalues():
-            setattr(self, a, 0)
+            setattr(self, a[0], 0)
         self.coordinates = None
         self.last_log_message_time = 0
         self.last_msg = ''
@@ -155,7 +159,7 @@ class Boat(object):
         Format the command in a target-compliant way.
         '''
         return ' '.join(map(str, args)) + "\r"
-    
+
     def send_command(self, *args):
         pass
     
@@ -165,7 +169,8 @@ class Boat(object):
         '''
         for value in data.split():
             key, value = value.split(":")
-            setattr(self, self.log_char_mapping[key], int(float(value)))
+#            print data # @DEBUG
+            setattr(self, self.log_char_mapping[key][0], int(float(value)))
         self.last_log_message_time = time()
         
     def get_magnetic_vector(self):

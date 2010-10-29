@@ -12,6 +12,7 @@ from lib import graphics
 from math import radians
 from operator import mul
 from commons import *
+import pango
 
 class Scene(graphics.Scene):
 
@@ -54,6 +55,11 @@ class Scene(graphics.Scene):
         self.add_child(self.magnetbox_sprite)        
         self.magnetvector_sprite = VectorSprite(self.magnetbox_sprite)
         self.add_child(self.magnetvector_sprite)
+        # FreeRunner Battery Level
+        self.battery_value = graphics.Label("battery", 7, "#00FF00", pango.ALIGN_LEFT, None, 100, False, False, "#000000", 1)
+        self.battery_value.anchor_x = -40
+        self.battery_value.anchor_y = -25
+        self.add_child(self.battery_value)
         self.connect("on-enter-frame", self.on_enter_frame)
         
     def change_boat(self, boat):
@@ -82,6 +88,9 @@ class Scene(graphics.Scene):
         self.sail_sprite.my_opacity = self.boat.sail_position / 100.0
         delta = time() - self.boat.last_log_message_time
         self.pingbeat_sprite.alpha = 0 if delta > 1 else 1 - delta % 1
+        battery_time = self.boat.bat_timeleft
+        self.battery_value.text = "B: " + str(battery_time).zfill(5) + " s"
+        self.battery_value.color = "#00FF00" if battery_time > 600 else "#FF0000"
 
     def redraw(self):
         graphics.Scene.redraw(self)

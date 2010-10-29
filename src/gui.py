@@ -7,7 +7,7 @@ Created on 28 Sep 2010
 @file: Provide context-aware GUI's for interacting with the program.
 '''
 
-import gobject, gtk
+import gobject, pango, gtk
 import boat, wifibridge
 from commons import *
 from graphics import Scene
@@ -21,8 +21,9 @@ class NumericMonitor(object):
     Generate a window showing all the proprieties of the boat.
     '''
     
-    def __init__(self, boat):
+    def __init__(self, boat, menuitem):
         self.boat = boat
+        self.menuitem = menuitem
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         # Generate table
         cols = 5
@@ -40,34 +41,47 @@ class NumericMonitor(object):
                 col, row = 0, 0
             # Cell
             cell = gtk.VBox(False, 0)
-            cell.set_border_width(2)
-            # Label
-            print self.boat.log_char_mapping[property]
-            label = gtk.Label(self.boat.log_char_mapping[property])
+            cell.set_border_width(8)
+            # First row: label
+            label = gtk.Label()
+            label.set_alignment(1, 0.5)
+            label.set_ellipsize(pango.ELLIPSIZE_END)
+            label.set_markup('<b>' + self.boat.log_char_mapping[property][0] + '</b>')
+            label.set_tooltip_text(self.boat.log_char_mapping[property][0])
             cell.pack_start(label)
-            # Value
-            entry = gtk.Entry(10)
-            entry.set_editable(False)
+            # Second row: Hbox with value and units
+            entry = gtk.HBox(False, 0)
+            entry.set_border_width(2)
+            value = gtk.Entry(10)
+            value.set_width_chars(15)
+            value.set_alignment(gtk.JUSTIFY_RIGHT)
+            value.set_editable(False)
+            entry.pack_start(value)
+            units = gtk.Label()
+            units.set_markup('<i>' + self.boat.log_char_mapping[property][1] + '</i>')
+            entry.pack_start(units)
             cell.pack_start(entry)
             table.attach(cell, col, col+1, row, row+1, gtk.FILL, gtk.FILL)
-            self.textboxes[property] = entry
+            self.textboxes[property] = value
         # Tune the window
         self.window.set_title("Numeric Monitor")
-        self.window.set_border_width(20)
+        self.window.set_border_width(10)
         self.window.resize(1, 1)
         self.window.set_resizable(False)
+        # TODO: Preventing the window to close is just temporary until 
+        # TODO: actions will be implemented
         self.window.connect("delete_event", self.on_nm_delete)
         self.window.show_all()
         
-    def on_nm_delete(self, widget, data=None):
-        self.window.hide()
-        print "Oh my!"
-        return True
-    
     def update_values(self):
         for k in self.textboxes.keys():
-            value = getattr(self.boat, self.boat.log_char_mapping[k])
+            value = getattr(self.boat, self.boat.log_char_mapping[k][0])
             self.textboxes[k].set_text(str(value))
+
+    def on_nm_delete(self, widget, data=None):
+        self.window.hide()
+        self.menuitem.set_active(False)
+        return True
 
 
 class GeneralControlPanel(object):
@@ -86,14 +100,14 @@ class GeneralControlPanel(object):
         self.builder.connect_signals(self)
         self.window = self.builder.get_object("window")
         self.logfile = open('../data/raw_msg.log', 'a', 1)
-        self.last_logged_msg = None;
+        self.last_logged_msg = None
         
     def do_log(self):
         if self.boat.last_msg != self.last_logged_msg:
             self.logfile.write(str(time()) + " " + self.boat.last_msg + "\n")
             self.last_logged_msg = self.boat.last_msg
     
-    def on_window_destroy(self, widget, data=None):
+    def on_window_destroy(self, widget):
         '''
         Works as far as you follow conventions...
         '''
@@ -141,7 +155,9 @@ class ComputerControlPanel(GeneralControlPanel):
     def serial_monitor(self):
         msg = self.boat.poll_message()
         if msg != None and msg[0] != '!':
-            self.messages.set_text(msg)
+            self.messages.set_text(str(msg))
+            if self.debug_mode:
+                print ">>> ", msg
         if self.boat.pilot_mode != COMPUTER:   # Avoid infinite loop
             self.sail_adjustment.set_value(self.boat.sail_position)
             self.rudder_adjustment.set_value(self.boat.rudder_position)
@@ -153,17 +169,17 @@ class ComputerControlPanel(GeneralControlPanel):
             self.boat.send_actual_heading()
         return True    #Necessary to keep it being scheduled by GObject
 
-    def on_command_button_clicked(self, widget, data=None):
+    def on_command_button_clicked(self, widget):
         self.boat.send_command(self.command_line.get_text())
  
-    def on_set_log_speed_button_clicked(self, widget, data=None):
+    def on_set_log_speed_button_clicked(self, widget):
         tmp = self.logging_adjustment
         self.boat.send_command(SET_LOG_INTERVAL, int(tmp.value*tmp.multiplier))
     
-    def on_stop_logging_button_clicked(self, widget, data=None):
+    def on_stop_logging_button_clicked(self, widget):
         self.boat.send_command(SET_LOG_INTERVAL, 0)
     
-    def on_ms_radio_toggled(self, widget, data=None):
+    def on_ms_radio_toggled(self, widget):
         a = self.logging_adjustment
         a.value          = 100
         a.lower          = 100
@@ -171,7 +187,7 @@ class ComputerControlPanel(GeneralControlPanel):
         a.step_increment = 50
         a.multiplier      = -1
     
-    def on_s_radio_toggled(self, widget, data=None):
+    def on_s_radio_toggled(self, widget):
         a = self.logging_adjustment
         a.value          = 1
         a.lower          = 1
@@ -179,7 +195,7 @@ class ComputerControlPanel(GeneralControlPanel):
         a.step_increment = 1
         a.multiplier      = 1
         
-    def on_m_radio_toggled(self, widget, data=None):
+    def on_m_radio_toggled(self, widget):
         a = self.logging_adjustment
         a.value          = 1
         a.lower          = 1
@@ -187,45 +203,45 @@ class ComputerControlPanel(GeneralControlPanel):
         a.step_increment = 1
         a.multiplier      = 1000
     
-    def on_rc_button_toggled(self, widget, data=None):
+    def on_rc_button_toggled(self, widget):
         self.boat.send_command(SET_PILOT_MODE, RC)
 
-    def on_autopilot_button_toggled(self, widget, data=None):
+    def on_autopilot_button_toggled(self, widget):
         self.boat.send_command(SET_PILOT_MODE, AUTO)
     
-    def on_computer_pilot_button_toggled(self, widget, data=None):
+    def on_computer_pilot_button_toggled(self, widget):
         self.boat.send_command(SET_PILOT_MODE, COMPUTER)
                
-    def on_off_pilot_button_toggled(self, widget, data=None):
+    def on_off_pilot_button_toggled(self, widget):
         self.boat.send_command(SET_PILOT_MODE, OFF)
         
-    def on_sail_winch_adjustment_value_changed(self, widget, data=None):
+    def on_sail_winch_adjustment_value_changed(self, widget):
         if self.boat.pilot_mode != COMPUTER:
             return # Avoid an infinite loop
         self.boat.send_command(SET_SAIL, widget.get_value())
 
-    def on_rudder_adjustment_value_changed(self, widget, data=None):
+    def on_rudder_adjustment_value_changed(self, widget):
         if self.boat.pilot_mode != COMPUTER:
             return # Avoid an infinite loop
         self.boat.send_command(SET_RUDDER, widget.get_value())
 
-    def on_logg_on_off_button_toggled(self, widget, data=None):
+    def on_logg_on_off_button_toggled(self, widget):
         state = widget.get_active()
         self.logging_mode = state
         widget.set_label("Logging in ON" if state else "Logging is OFF")
 
-    def on_connect_remote_button_clicked(self, widget, data=None):
+    def on_connect_remote_button_clicked(self, widget):
         if self.remote_ip_widget.get_text() == '':
             self.remote_ip_widget.set_text('192.168.1.35')
         if self.remote_port_widget.get_text() == '':
             self.remote_port_widget.set_text('5000')
         self.remote_uri_dialogue.show()
         
-    def on_remote_boat_win_dialogue_delete_event(self, widget, data=None):
+    def on_remote_boat_win_dialogue_delete_event(self, widget):
         widget.hide_on_delete()
         return True
         
-    def on_boat_uri_button_clicked(self, widget, data=None):
+    def on_boat_uri_button_clicked(self, widget):
         host = self.remote_ip_widget.get_text()
         port = int(self.remote_port_widget.get_text())
         try:
@@ -237,34 +253,40 @@ class ComputerControlPanel(GeneralControlPanel):
             self.remote_uri_dialogue.hide()
             self.scene.change_boat(self.boat)
         
-    def on_disconnect_menu_item_activate(self, widget, data=None):
+    def on_disconnect_menu_item_activate(self, widget):
         print "disconnect"
         
-    def on_log_activate_item(self, widget, data=None):
+    def on_log_activate_item(self, widget):
         print "log"
         
-    def on_wifi_activate_item(self, widget, data=None):
+    def on_wifi_activate_item(self, widget):
         print "wifi"
         
-    def on_serial_activate_item(self, widget, data=None):
+    def on_serial_activate_item(self, widget):
         print "serial"
         
-    def on_about_menu_item_activate(self, widget, data=None):
+    def on_about_menu_item_activate(self, widget):
         self.about_dialogue.show()
         
-    def on_about_dialogue_delete_event(self, widget, data=None):
+    def on_about_dialogue_delete_event(self, widget):
         self.about_dialogue.hide()
         return True
 
-    def on_about_dialogue_response(self, widget, data=None):
+    def on_about_dialogue_response(self, widget):
         self.about_dialogue.hide()
         
-    def on_numeric_monitor_activate(self, widget, data=None):
-        if self.nm == None:
-            self.nm = NumericMonitor(self.boat)
+    def on_numeric_monitor_toggled(self, widget):
+        if widget.get_active():
+            if self.nm == None:
+                self.nm = NumericMonitor(self.boat, widget)
+            else:
+                self.nm.window.show_all()
         else:
-            self.nm.window.show_all()
+            self.nm.window.hide()
 
+    def on_debug_mode_toggled(self, widget):
+        self.debug_mode = widget.get_active()
+        
         
 class FreeRunnerControlPanel(GeneralControlPanel):
 

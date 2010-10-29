@@ -99,11 +99,11 @@
                     <property name="visible">True</property>
                     <property name="ubuntu_local">True</property>
                     <child>
-                      <object class="GtkMenuItem" id="numeric_monitor">
+                      <object class="GtkCheckMenuItem" id="numeric_monitor">
                         <property name="visible">True</property>
                         <property name="label" translatable="yes">Numeric monitor</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="on_numeric_monitor_activate"/>
+                        <signal name="toggled" handler="on_numeric_monitor_toggled"/>
                       </object>
                     </child>
                   </object>
@@ -118,6 +118,22 @@
                 <child type="submenu">
                   <object class="GtkMenu" id="menu2">
                     <property name="visible">True</property>
+                    <child>
+                      <object class="GtkCheckMenuItem" id="debug_mode">
+                        <property name="visible">True</property>
+                        <property name="tooltip_text" translatable="yes">Dump to console all 
+non-log messages received 
+from the boat</property>
+                        <property name="label" translatable="yes">Debug mode</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="on_debug_mode_toggled"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem" id="menuitem1">
+                        <property name="visible">True</property>
+                      </object>
+                    </child>
                     <child>
                       <object class="GtkImageMenuItem" id="preferences_menu_item">
                         <property name="label">gtk-preferences</property>
