@@ -78,7 +78,8 @@ class MockSerial(object):
         v = int(float(v))
         if k == 'I' and v < 0:     # This needs processing as on the arduino!
             v *= -0.001
-        self.values[k] = v
+        if k != "h":
+            self.values[k] = v
     
     def readline(self):
         '''
@@ -155,6 +156,9 @@ class Boat(object):
         '''
         return ' '.join(map(str, args)) + "\r"
     
+    def send_command(self, *args):
+        pass
+    
     def parse_log_data(self, data):
         '''
         Update internal data on the boat
@@ -181,6 +185,9 @@ class Boat(object):
         Helper funtion to get the 3d accelerometer reading as a tuple.
         '''
         return (self.accelerometer_x, self.accelerometer_y, self.accelerometer_z)
+
+    def send_actual_heading(self):
+        self.send_command(SEND_ACTUAL_HEADING, str(int(255.0/360 * (360 - self.north))))
 
 
 class BareBoat(Boat):

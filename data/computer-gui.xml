@@ -90,6 +90,27 @@
               </object>
             </child>
             <child>
+              <object class="GtkMenuItem" id="view">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">_View</property>
+                <property name="use_underline">True</property>
+                <child type="submenu">
+                  <object class="GtkMenu" id="menu5">
+                    <property name="visible">True</property>
+                    <property name="ubuntu_local">True</property>
+                    <child>
+                      <object class="GtkMenuItem" id="numeric_monitor">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">Numeric monitor</property>
+                        <property name="use_underline">True</property>
+                        <signal name="activate" handler="on_numeric_monitor_activate"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
               <object class="GtkMenuItem" id="configuration_menu">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">_Configuration</property>

@@ -1,4 +1,5 @@
 .*
 *.sh
 *.pyc
-raw_msg.log
+*.log
+TODO.txt

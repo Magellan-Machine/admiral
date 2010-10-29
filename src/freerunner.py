@@ -81,7 +81,15 @@ class FreeRunner(object):
             'usb_mode'       : ('_file_handler', "/sys/devices/platform/s3c-ohci/usb_mode"),
             'pwr_mode'       : ('_file_handler', "/sys/class/i2c-adapter/i2c-0/0-0073/neo1973-pm-host.0/hostmode"),
             'gps_mode'       : ('_file_handler', "/sys/class/i2c-adapter/i2c-0/0-0073/pcf50633-regltr.7/neo1973-pm-gps.0/power_on"),
+            # http://wiki.openmoko.org/wiki/GTA02_sysfs
+            # Current being drawn from battery (+ve) or pushed into battery 
+            # during charging (-ve) in uA 
             'bat_absorption' : ('_file_handler', "/sys/class/power_supply/battery/current_now"),
+            # At current rate of discharge, estimate of how long we can run for. 
+            # If battery is not discharging, it won't make an estimate and will 
+            # return a magic value "3932100" meaning "no estimate". The coulomb
+            # counter averages the load and adjusts this value slowly to be its 
+            # estimate of when we will blow chunks. 
             'bat_timeleft'   : ('_file_handler', "/sys/class/power_supply/battery/time_to_empty_now"),
             'wifi'           : ('_wifi_handler',),
             'accelerometer'  : ('_accel_handler',),

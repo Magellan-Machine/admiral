@@ -14,6 +14,62 @@ from graphics import Scene
 from time import time
 from freerunner import FreeRunner
 
+
+class NumericMonitor(object):
+    
+    '''
+    Generate a window showing all the proprieties of the boat.
+    '''
+    
+    def __init__(self, boat):
+        self.boat = boat
+        self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        # Generate table
+        cols = 5
+        ceil = lambda a, b : a/b if not a%b else a/b + 1
+        rows = ceil(len(self.boat.log_char_mapping), cols)
+        table = gtk.Table(cols, rows, True)
+        self.window.add(table)
+        # Populate the table
+        self.textboxes = {}
+        for ordinal, property in enumerate(self.boat.log_char_mapping, 0):
+            if ordinal != 0:
+                col = ordinal % cols
+                row = ordinal / cols
+            else:
+                col, row = 0, 0
+            # Cell
+            cell = gtk.VBox(False, 0)
+            cell.set_border_width(2)
+            # Label
+            print self.boat.log_char_mapping[property]
+            label = gtk.Label(self.boat.log_char_mapping[property])
+            cell.pack_start(label)
+            # Value
+            entry = gtk.Entry(10)
+            entry.set_editable(False)
+            cell.pack_start(entry)
+            table.attach(cell, col, col+1, row, row+1, gtk.FILL, gtk.FILL)
+            self.textboxes[property] = entry
+        # Tune the window
+        self.window.set_title("Numeric Monitor")
+        self.window.set_border_width(20)
+        self.window.resize(1, 1)
+        self.window.set_resizable(False)
+        self.window.connect("delete_event", self.on_nm_delete)
+        self.window.show_all()
+        
+    def on_nm_delete(self, widget, data=None):
+        self.window.hide()
+        print "Oh my!"
+        return True
+    
+    def update_values(self):
+        for k in self.textboxes.keys():
+            value = getattr(self.boat, self.boat.log_char_mapping[k])
+            self.textboxes[k].set_text(str(value))
+
+
 class GeneralControlPanel(object):
     
     '''
@@ -78,6 +134,7 @@ class ComputerControlPanel(GeneralControlPanel):
 
         # Other varaibles
         self.logging_mode = False
+        self.nm = None
 
         self.window.show_all()
     
@@ -90,6 +147,10 @@ class ComputerControlPanel(GeneralControlPanel):
             self.rudder_adjustment.set_value(self.boat.rudder_position)
         if self.logging_mode == True:
             self.do_log()
+        if self.nm:
+            self.nm.update_values()
+        if msg != None:
+            self.boat.send_actual_heading()
         return True    #Necessary to keep it being scheduled by GObject
 
     def on_command_button_clicked(self, widget, data=None):
@@ -198,6 +259,13 @@ class ComputerControlPanel(GeneralControlPanel):
     def on_about_dialogue_response(self, widget, data=None):
         self.about_dialogue.hide()
         
+    def on_numeric_monitor_activate(self, widget, data=None):
+        if self.nm == None:
+            self.nm = NumericMonitor(self.boat)
+        else:
+            self.nm.window.show_all()
+
+        
 class FreeRunnerControlPanel(GeneralControlPanel):
 
     def __init__(self):
@@ -285,4 +353,3 @@ class FreeRunnerControlPanel(GeneralControlPanel):
 
     def on_log_data_toggled(self, widget):
         self.logging_mode = widget.get_active()
-        

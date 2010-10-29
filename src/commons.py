@@ -23,6 +23,7 @@ SET_PILOT_MODE            =  "P"
 SET_HEADING               =  "H"
 SET_RUDDER                =  "R"
 SET_SAIL                  =  "S"
+SEND_ACTUAL_HEADING       =  "h"
 
 # Values for pilot mode
 OFF                       = 0
