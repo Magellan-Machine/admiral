@@ -150,6 +150,7 @@ class ComputerControlPanel(GeneralControlPanel):
         self.logging_mode = False
         self.nm = None
 
+        self.window.resize(900, 640)
         self.window.show_all()
     
     def serial_monitor(self):

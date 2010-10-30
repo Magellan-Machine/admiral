@@ -143,10 +143,10 @@ class Boat(object):
             'b' : ('accelerometer_y', '-'),    # TODO: Remove when accel on arduino
             'c' : ('accelerometer_z', '-'),    # TODO: Remove when accel on arduino
             
-            'u' : ('ardu_used_voltage', '?'),
-            'i' : ('ardu_used_current', '?'),
-            'p' : ('ardu_used_power', '?'),
-            'e' : ('ardu_energy_counter', '?'),
+            'u' : ('ardu_used_voltage', 'mV'),
+            'i' : ('ardu_used_current', 'mA'),
+            'p' : ('ardu_used_power', 'mW'),
+            'e' : ('ardu_energy_counter', 'µJ'),
         }
         for a in self.log_char_mapping.itervalues():
             setattr(self, a[0], 0)
