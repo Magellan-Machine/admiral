@@ -28,12 +28,12 @@ class NumericMonitor(object):
         # Generate table
         cols = 5
         ceil = lambda a, b : a/b if not a%b else a/b + 1
-        rows = ceil(len(self.boat.log_char_mapping), cols)
+        rows = ceil(len(LOG_SIGNALS), cols)
         table = gtk.Table(cols, rows, True)
         self.window.add(table)
         # Populate the table
         self.textboxes = {}
-        for ordinal, property in enumerate(self.boat.log_char_mapping, 0):
+        for ordinal, property in enumerate(LOG_SIGNALS, 0):
             if ordinal != 0:
                 col = ordinal % cols
                 row = ordinal / cols
@@ -46,8 +46,8 @@ class NumericMonitor(object):
             label = gtk.Label()
             label.set_alignment(1, 0.5)
             label.set_ellipsize(pango.ELLIPSIZE_END)
-            label.set_markup('<b>' + self.boat.log_char_mapping[property][0] + '</b>')
-            label.set_tooltip_text(self.boat.log_char_mapping[property][0])
+            label.set_markup('<b>' + LOG_SIGNALS[property][0] + '</b>')
+            label.set_tooltip_text(LOG_SIGNALS[property][0])
             cell.pack_start(label)
             # Second row: Hbox with value and units
             entry = gtk.HBox(False, 0)
@@ -58,7 +58,7 @@ class NumericMonitor(object):
             value.set_editable(False)
             entry.pack_start(value)
             units = gtk.Label()
-            units.set_markup('<i>' + self.boat.log_char_mapping[property][1] + '</i>')
+            units.set_markup('<i>' + LOG_SIGNALS[property][1] + '</i>')
             entry.pack_start(units)
             cell.pack_start(entry)
             table.attach(cell, col, col+1, row, row+1, gtk.FILL, gtk.FILL)
@@ -68,14 +68,12 @@ class NumericMonitor(object):
         self.window.set_border_width(10)
         self.window.resize(1, 1)
         self.window.set_resizable(False)
-        # TODO: Preventing the window to close is just temporary until 
-        # TODO: actions will be implemented
         self.window.connect("delete_event", self.on_nm_delete)
         self.window.show_all()
         
     def update_values(self):
         for k in self.textboxes.keys():
-            value = getattr(self.boat, self.boat.log_char_mapping[k][0])
+            value = getattr(self.boat, LOG_SIGNALS[k][0])
             self.textboxes[k].set_text(str(value))
 
     def on_nm_delete(self, widget, data=None):
@@ -99,7 +97,7 @@ class GeneralControlPanel(object):
         self.builder.add_from_file(self.gui_file)
         self.builder.connect_signals(self)
         self.window = self.builder.get_object("window")
-        self.logfile = open('../data/raw_msg.log', 'a', 1)
+        self.logfile = open(LOG_RAW_FNAME, 'a', 1)
         self.last_logged_msg = None
         
     def do_log(self):
@@ -166,8 +164,6 @@ class ComputerControlPanel(GeneralControlPanel):
             self.do_log()
         if self.nm:
             self.nm.update_values()
-        if msg != None:
-            self.boat.send_actual_heading()
         return True    #Necessary to keep it being scheduled by GObject
 
     def on_command_button_clicked(self, widget):

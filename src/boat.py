@@ -120,35 +120,7 @@ class Boat(object):
     '''
     
     def __init__(self):
-        self.log_char_mapping = {       # values used to decode log strings
-            'A' : ('bat_absorption', 'µA'),
-            'B' : ('bat_timeleft', 's'),
-            'H' : ('desired_heading', '°'),
-            'N' : ('north', '°'),
-            'P' : ('pilot_mode', 'CODE'),
-            'R' : ('rudder_position', '%'),
-            'S' : ('sail_position', '%'),
-            'T' : ('last_msg_millis', 'ms'),
-            'X' : ('longitude', '°'),
-            'Y' : ('longitude', '°'),
-            'W' : ('relative_wind', '°'),
-            'I' : ('log_signal_interval', 'ms'),
-
-            'n' : ('magnetic_north', '°'),     # TODO: Remove when accel on arduino
-            'x' : ('magnetic_x', '-'),         # TODO: Remove when accel on arduino
-            'y' : ('magnetic_y', '-'),         # TODO: Remove when accel on arduino
-            'z' : ('magnetic_z', '-'),         # TODO: Remove when accel on arduino
-            
-            'a' : ('accelerometer_x', '-'),    # TODO: Remove when accel on arduino
-            'b' : ('accelerometer_y', '-'),    # TODO: Remove when accel on arduino
-            'c' : ('accelerometer_z', '-'),    # TODO: Remove when accel on arduino
-            
-            'u' : ('ardu_used_voltage', 'mV'),
-            'i' : ('ardu_used_current', 'mA'),
-            'p' : ('ardu_used_power', 'mW'),
-            'e' : ('ardu_energy_counter', 'µJ'),
-        }
-        for a in self.log_char_mapping.itervalues():
+        for a in LOG_SIGNALS.itervalues():
             setattr(self, a[0], 0)
         self.coordinates = None
         self.last_log_message_time = 0
@@ -170,7 +142,7 @@ class Boat(object):
         for value in data.split():
             key, value = value.split(":")
 #            print data # @DEBUG
-            setattr(self, self.log_char_mapping[key][0], int(float(value)))
+            setattr(self, LOG_SIGNALS[key][0], int(float(value)))
         self.last_log_message_time = time()
         
     def get_magnetic_vector(self):
@@ -190,9 +162,6 @@ class Boat(object):
         Helper funtion to get the 3d accelerometer reading as a tuple.
         '''
         return (self.accelerometer_x, self.accelerometer_y, self.accelerometer_z)
-
-    def send_actual_heading(self):
-        self.send_command(SEND_ACTUAL_HEADING, str(int(255.0/360 * (360 - self.north))))
 
 
 class BareBoat(Boat):

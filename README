@@ -1,6 +1,10 @@
 This is the control centre software used to interact with the sailing
 robots produced by the "Magellan Machine" project.
 
-Dependencies: Python, GTK+, Cairo
+Dependencies:
+- Python with all its standard libraries (serial, math, time, etc...)
+- PyGTK
+- Storm ORM (available via: https://storm.canonical.com/)
+- Hamster Experiements (included in the repo)
 
 Licence: GPLv3

@@ -2,4 +2,5 @@
 *.sh
 *.pyc
 *.log
+*.sqlite
 TODO.txt
