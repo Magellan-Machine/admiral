@@ -15,6 +15,8 @@ import re
 import datetime
 from storm.locals import *
 from commons import *
+import kmlbase, kmldom, kmlengine
+
 
 class LogDataBase(object):
     
@@ -49,6 +51,20 @@ class LogDataBase(object):
         self.store.execute(query_signal_table, noresult=True)
         self.store.execute(query_stint_table, noresult=True)
         self.store.commit()
+    
+    def _delta_t_signals(self, signal_a, signal_b):
+        '''
+        Returns the delta time in seconds between two signals.
+        '''
+        return (signal_b.last_msg_millis - signal_a.last_msg_millis) / 1000.0
+    
+    def _check_if_moved(self, from_signal, to_signal):
+        '''
+        Return True if the boat has moved beyond threshold between the two points.
+        '''
+        space = gps_distance_between(from_signal, to_signal)
+        time  = self._delta_t_signals(from_signal, to_signal)
+        return True if space/time > STINT_SPEED_THRESHOLD else False
         
     def import_signals(self, signals):
         '''
@@ -65,7 +81,73 @@ class LogDataBase(object):
                 setattr(tmp, LOG_SIGNALS[k][0], v)
             self.store.add(tmp)
         self.store.commit()
-                
+        
+    def find_stints(self, range=None):
+        '''
+        Find stints in a record set.
+        
+        range is a tuple (start, finish) with the id of the signals identifying
+        the search pool. If set to None, stints are found starting from the id
+        following the last id already belonging to a stint.
+
+        A stint is defined as all the GPS reading in an interval of time during
+        which the boat kept on moving at at least STINT_SPEED_THRESHOLD m/s
+        within units of time of the duration of STINT_TIME_SAMPLE s.        
+        '''
+        
+        # If not passed, the range is all signals after last recorded stint.
+        if range == None:
+            last = self.store.find(Signal).max(Signal.id)
+            if last == None: # DB is empty
+                return 0 
+            first = self.store.find(Stint).max(Stint.stop_signal)
+            first = first if first else 0 # If no stints have been found...
+        else:
+            first, last = range
+        result = self.store.find(Signal, Signal.id >= first, Signal.id <= last).order_by(Signal.id)
+        # Start looking for stints
+        stints = []
+        start_signal = None
+        last_positive = None
+        previous = result[0]
+        for current in result[1:]:
+            if self._check_if_moved(previous, current):
+                if not start_signal:
+                    start_signal = previous
+                last_positive = current
+            else:
+                if start_signal:
+                    if self._delta_t_signals(last_positive, current) > STINT_MAX_STILL_TIME:
+                        if self._delta_t_signals(start_signal, last_positive) > STINT_MINIMUM_LENGTH:
+                            stints.append((start_signal.id, last_positive.id))
+                        start_signal = None
+                        last_positive = None
+            previous = current
+        for stint in stints:
+            print stint, self._delta_t_signals(self.store.get(Signal, stint[0]), self.store.get(Signal, stint[1]))
+        return stints
+    
+    def get_kml(self, range):
+        '''
+        Return the kml file of a given range.
+        '''
+        steps = self.store.find(Signal, Select(
+                        columns=(Signal.latitude, Signal.longitude)
+                                               ))
+        factory = kmldom.KmlFactory_GetFactory()
+        docu = factory.CreateDocument()
+        docu.set_name("Foo & Bar")
+        kml = factory.CreateKml()
+        kml.set_feature(docu)
+        for point in range:
+            pl = factory.CreatePlacemark()
+            pl.set_name(point.id)
+            kmlfile, errors = kmlengine.KmlFile.Create
+#            mg = kmldom.AsMultiGeometry(kmlfile.get_root())
+#            pl.set_geometry(mg)
+#            docu.add_feature(pl)
+        print kmldom.SerializePretty(kml)
+
 
 class StormIntrospective(type):
     
@@ -113,6 +195,11 @@ class Stint(object):
     description = Unicode()
     start_signal = Int()
     stop_signal = Int()
+    
+    def __init__(self, start, stop, description="AutoStint"):
+        self.start_signal = start
+        self.stop_signal = stop
+        self.description = description
 
 
 class LogTextFile(object):
@@ -166,7 +253,12 @@ class LogTextFile(object):
             return
         db = LogDataBase(output_file, overwrite)
         db.import_signals(cleaned_log)
-
+        if verbose:
+            print "DB updated. Current size: %d bytes" % os.path.getsize(output_file)
+        if stints:
+            stints = db.find_stints()
+            if verbose:
+                print "%d stints have been identified in the new recordset." % len(stints)
 
 def _usage():
     print main.__doc__

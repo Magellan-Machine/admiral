@@ -12,6 +12,7 @@ Created on 15 Sep 2010
 # -----------------------------------------------------------------------------
 
 from time import time
+import math
 
 # -----------------------------------------------------------------------------
 # --- CONSTANTS
@@ -42,6 +43,10 @@ WIFI_PORT                 = 5000
 LOG_RAW_FNAME             = "../data/raw.log"
 LOG_DB_FNAME              = "../data/log.sqlite"
 LOG_CLEAN_FNAME           = "../data/clean.log"
+STINT_MINIMUM_LENGTH      = 30     # in seconds
+STINT_MAX_STILL_TIME      = 10     # in seconds 
+STINT_SPEED_THRESHOLD     = 0.1    # in m/s
+EARTH_RADIUS              = 6371   # in Km
 
 # Log signals are used to parse log data from the boat into the log system
 # Each entry in the dictionary should be read like this contains:
@@ -79,3 +84,36 @@ LOG_SIGNALS = {
             'p' : ('ardu_used_power', 'mW', 'INTEGER'),
             'e' : ('ardu_energy_counter', 'µJ', 'INTEGER'),
         }
+
+# -----------------------------------------------------------------------------
+# --- HELPER FUNCTIONS
+# -----------------------------------------------------------------------------
+
+def gps_distance_between(point_a, point_b):
+    '''
+    Calculate the orthodromic distance between two GPS readings.
+   
+    point_a and point_b can be either of the two:
+    - tuples in the form (latitude, longitude).
+    - instances of the class logwork.Signal
+    The result is in metres.
+    
+    ATTENTION: since latitude is given before longitude, if we are using the 
+    X and Y representation, then we must pass in (Y, X) and *not* (X, Y)
+    
+    Computed with the Haversine formula 
+    (http://en.wikipedia.org/wiki/Haversine_formula)
+    '''
+    if hasattr(point_a, 'latitude'):
+        a_lat, a_lon = math.radians(point_a.latitude), math.radians(point_a.longitude)
+    else:
+        a_lat, a_lon = math.radians(point_a[0]), math.radians(point_a[1])
+    if hasattr(point_b, 'latitude'):
+        b_lat, b_lon = math.radians(point_b.latitude), math.radians(point_b.longitude)
+    else:
+        b_lat, b_lon = math.radians(point_b[0]), math.radians(point_b[1])
+    d_lat = b_lat - a_lat
+    d_lon = b_lon - a_lon
+    a = math.sin(d_lat/2.0)**2 + math.cos(a_lat) * math.cos(b_lat) * math.sin(d_lon/2.0)**2
+    c = 2 * math.asin(math.sqrt(a))
+    return EARTH_RADIUS * c * 1000
