@@ -292,9 +292,19 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         self.boat = boat.FreeBoat(freerunner=self.fr)
         self.gui_file = "../data/freerunner-gui.xml"
         super(FreeRunnerControlPanel, self).__init__()
+        # Collect all buttons in order to be able to gray them out later on
+        self.all_buttons=[]
+        self.all_buttons.append(self.builder.get_object("log_data"))
+        self.all_buttons.append(self.builder.get_object("wireless_bridge"))
+        self.all_buttons.append(self.builder.get_object("wireless_watchdog"))
+        self.all_buttons.append(self.builder.get_object("use_accelerometer"))
+        self.all_buttons.append(self.builder.get_object("quit_button"))
+        self.all_buttons.append(self.builder.get_object("run_button"))        
+        self.all_buttons.append(self.builder.get_object("use_gps"))        
+        self.all_buttons.append(self.builder.get_object("battery_info"))        
         # The following bit replace the placeholder drawing area with the scene
         tmp = self.builder.get_object("drawingarea")
-        self.scene = LockScreen(50)
+        self.scene = LockScreen(self._set_button_sensitivity)
         tmp.destroy()
         box = self.builder.get_object("frame1")
         box.add(self.scene)
@@ -309,6 +319,13 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         gobject.timeout_add(10, self.loop)
         self.window.maximize()
         self.window.show_all()
+        
+    def _set_button_sensitivity(self, status):
+        '''
+        Allow to change sensitivity of all buttons on screen.
+        '''
+        for button in self.all_buttons:
+            button.set_sensitive(status)
 
     def loop(self):
         '''

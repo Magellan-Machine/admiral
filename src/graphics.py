@@ -206,10 +206,11 @@ class LockScreen(graphics.Scene):
     iPhone-like lock screen widget for the FreeRunner.
     '''
     
-    def __init__(self, height):
-        self.notch_h = height
+    def __init__(self, callback):
+        self.callback = callback
+        self.notch_h = 50
         graphics.Scene.__init__(self)
-        self.hint = graphics.Label("Slide to unlock", self.notch_h / 2, "#000", x=2.5*LS_NOTCH_W, y=self.notch_h*0.75)
+        self.hint = graphics.Label(LS_TEXT[True], self.notch_h / 2, "#000", x=2.5*LS_NOTCH_W, y=self.notch_h*0.75)
         self.add_child(self.hint)
         self.notch = Notch(LS_NOTCH_W, self.notch_h)
         self.add_child(self.notch)
@@ -225,6 +226,7 @@ class LockScreen(graphics.Scene):
         if self.notch.x >= self.width - LS_NOTCH_W:
             self.notch.unlocked = not self.notch.unlocked
             self.notch.render()
+            self.callback(self.notch.unlocked)
             self.hint.text = (LS_TEXT[self.notch.unlocked])
         self.animate(self.notch, x = LS_NOTCH_W, easing = Easing.Quart.ease_out)
 
@@ -232,7 +234,7 @@ class Notch(graphics.Sprite):
     def __init__(self, x, y):
         self.notch_h = y
         graphics.Sprite.__init__(self, x, y)
-        self.unlocked = False
+        self.unlocked = True
         self.draggable = True   # allow dragging
         self.render()
         
