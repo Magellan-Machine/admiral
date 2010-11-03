@@ -377,5 +377,5 @@ def main(argv):
     
 if __name__ == '__main__':
     db = LogDataBase(fname='/home/mac/Desktop/log/trial.sqlite')
-    db.get_kml(2)
+    db.get_kml(1)
 #    main(sys.argv[1:])

@@ -35,6 +35,11 @@ COMPUTER                  = 3
 WATER                     = "#009AD6"
 COMPUTER_CONTROLLED       = "#D70019"
 
+# Lockscreen widget
+LS_NOTCH_W = 80
+LS_COLORS = ("#A00", "#0A0")
+LS_TEXT = ("Slide to unlock", "Slide to lock")
+
 # Others
 ON                        = 1
 WIFI_MAYBE_LOST           = 5      # in seconds

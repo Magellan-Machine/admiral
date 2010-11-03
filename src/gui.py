@@ -10,7 +10,7 @@ Created on 28 Sep 2010
 import gobject, pango, gtk
 import boat, wifibridge
 from commons import *
-from graphics import Scene
+from graphics import Scene, LockScreen
 from time import time
 from freerunner import FreeRunner
 
@@ -292,6 +292,12 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         self.boat = boat.FreeBoat(freerunner=self.fr)
         self.gui_file = "../data/freerunner-gui.xml"
         super(FreeRunnerControlPanel, self).__init__()
+        # The following bit replace the placeholder drawing area with the scene
+        tmp = self.builder.get_object("drawingarea")
+        self.scene = LockScreen(50)
+        tmp.destroy()
+        box = self.builder.get_object("frame1")
+        box.add(self.scene)
         # Each subsystem has its name, name in self.active_system
         # set indicates the system is active. self.active_systems is passed
         # to the instance of FreeRunner. All systems are initially OFF

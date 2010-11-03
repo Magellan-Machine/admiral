@@ -9,6 +9,7 @@ operating the software on a PC [On a free-runner these classes are unused].
 '''
 
 from lib import graphics
+from lib.pytweener import Easing
 from math import radians
 from operator import mul
 from commons import *
@@ -199,3 +200,42 @@ class VectorSprite(graphics.Sprite):
         col = self.my_color if self.vector[2] >= 0 else "#000000"
         self.graphics.fill(col)
 
+class LockScreen(graphics.Scene):
+    
+    '''
+    iPhone-like lock screen widget for the FreeRunner.
+    '''
+    
+    def __init__(self, height):
+        self.notch_h = height
+        graphics.Scene.__init__(self)
+        self.hint = graphics.Label("Slide to unlock", self.notch_h / 2, "#000", x=2.5*LS_NOTCH_W, y=self.notch_h*0.75)
+        self.add_child(self.hint)
+        self.notch = Notch(LS_NOTCH_W, self.notch_h)
+        self.add_child(self.notch)
+        self.connect("on-enter-frame", self.on_enter_frame)
+        self.connect("on-drag-finish", self.on_drag_finish)
+
+    def on_enter_frame(self, scene, context):
+        self.notch.y = self.notch_h
+        self.notch.x = self.notch.x if self.notch.x > LS_NOTCH_W else LS_NOTCH_W
+        self.notch.x = self.notch.x if self.notch.x < self.width - LS_NOTCH_W else self.width - LS_NOTCH_W
+
+    def on_drag_finish(self, scene, sprite, event):
+        if self.notch.x >= self.width - LS_NOTCH_W:
+            self.notch.unlocked = not self.notch.unlocked
+            self.notch.render()
+            self.hint.text = (LS_TEXT[self.notch.unlocked])
+        self.animate(self.notch, x = LS_NOTCH_W, easing = Easing.Quart.ease_out)
+
+class Notch(graphics.Sprite):
+    def __init__(self, x, y):
+        self.notch_h = y
+        graphics.Sprite.__init__(self, x, y)
+        self.unlocked = False
+        self.draggable = True   # allow dragging
+        self.render()
+        
+    def render(self):
+        self.graphics.rectangle(-LS_NOTCH_W, -self.notch_h, LS_NOTCH_W*2, self.notch_h*2, 5) 
+        self.graphics.fill(LS_COLORS[self.unlocked])
