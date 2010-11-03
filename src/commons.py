@@ -44,7 +44,7 @@ LOG_RAW_FNAME             = "../data/raw.log"
 LOG_DB_FNAME              = "../data/log.sqlite"
 LOG_CLEAN_FNAME           = "../data/clean.log"
 STINT_MINIMUM_LENGTH      = 30     # in seconds
-STINT_MAX_STILL_TIME      = 10     # in seconds 
+STINT_MAX_STILL_TIME      = 5      # in seconds 
 STINT_SPEED_THRESHOLD     = 0.1    # in m/s
 EARTH_RADIUS              = 6371   # in Km
 
@@ -64,7 +64,7 @@ LOG_SIGNALS = {
             'P' : ('pilot_mode', 'CODE', 'INTEGER'),
             'R' : ('rudder_position', '%', 'INTEGER'),
             'S' : ('sail_position', '%', 'INTEGER'),
-            'T' : ('last_msg_millis', 'ms', 'INTEGER'),
+            'T' : ('ardu_millis', 'ms', 'INTEGER'),
             'X' : ('longitude', '°', 'REAL'),
             'Y' : ('latitude', '°', 'REAL'),
             'W' : ('relative_wind', '°', 'INTEGER'),

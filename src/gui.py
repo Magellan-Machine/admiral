@@ -198,7 +198,7 @@ class ComputerControlPanel(GeneralControlPanel):
         a.lower          = 1
         a.upper          = 60
         a.step_increment = 1
-        a.multiplier      = 1000
+        a.multiplier     = 1000
     
     def on_rc_button_toggled(self, widget):
         self.boat.send_command(SET_PILOT_MODE, RC)

@@ -56,7 +56,7 @@ class LogDataBase(object):
         '''
         Returns the delta time in seconds between two signals.
         '''
-        return (signal_b.last_msg_millis - signal_a.last_msg_millis) / 1000.0
+        return (signal_b.ardu_millis - signal_a.ardu_millis) / 1000.0
     
     def _check_if_moved(self, from_signal, to_signal):
         '''
@@ -82,13 +82,16 @@ class LogDataBase(object):
             self.store.add(tmp)
         self.store.commit()
         
-    def find_stints(self, range=None):
+    def find_stints(self, range=None, db_save=False):
         '''
         Find stints in a record set.
         
         range is a tuple (start, finish) with the id of the signals identifying
         the search pool. If set to None, stints are found starting from the id
         following the last id already belonging to a stint.
+        If db_save is set to True, stints are saved with canned names in
+        the database.
+        Return a list of stints in the form [(start_id, end_id), ...]
 
         A stint is defined as all the GPS reading in an interval of time during
         which the boat kept on moving at at least STINT_SPEED_THRESHOLD m/s
@@ -123,29 +126,77 @@ class LogDataBase(object):
                         start_signal = None
                         last_positive = None
             previous = current
-        for stint in stints:
-            print stint, self._delta_t_signals(self.store.get(Signal, stint[0]), self.store.get(Signal, stint[1]))
+        if db_save == True:
+            for stint in stints:
+                self.store.add(Stint(stint[0], stint[1]))
+            self.store.commit()
         return stints
     
-    def get_kml(self, range):
+        
+    def get_kml(self, param):
         '''
         Return the kml file of a given range.
+        
+        It is possible to pass either a range (signal_first_id, signal_last_id)
+        or a stint ID. 
         '''
-        steps = self.store.find(Signal, Select(
-                        columns=(Signal.latitude, Signal.longitude)
-                                               ))
+        if not isinstance(param, tuple):
+            stint = self.store.get(Stint, param)
+            start = stint.start_signal
+            stop = stint.stop_signal
+        else:
+            stint = None
+            start, stop = param
+        signals = self.store.find(Signal, And(Signal.id >= start, Signal.id <= stop))
         factory = kmldom.KmlFactory_GetFactory()
-        docu = factory.CreateDocument()
-        docu.set_name("Foo & Bar")
+        # Create the embedding document
+        document = factory.CreateDocument()
+        document.set_name("MagellanMachine sailing")
+        # Create the style
+        line_style = factory.CreateLineStyle()
+        line_style.set_color(kmlbase.Color32('7f00ffff'))
+        line_style.set_width(4)
+        style = factory.CreateStyle()
+        style.set_id("mmstyle")
+        style.set_linestyle(line_style)
+        document.add_styleselector(style)
+        # Create the placemarks
+        placemark = factory.CreatePlacemark()
+        placemark.set_name("Name Foo Bar!")
+        placemark.set_styleurl("#mmstyle")
+        coordinates = factory.CreateCoordinates()
+        prev = None
+        for signal in signals:
+            coordinates.add_latlng(signal.latitude, signal.longitude)
+            # Individual signals
+            tmp = factory.CreatePlacemark()
+            tmp.set_name("#" + str(signal.id))
+            msg = ''
+            msg += 'North: ' + str(signal.north)
+            msg += '\nRudder: ' + str(signal.rudder_position)
+            msg += '\nSail: ' + str(signal.sail_position)
+            if prev:
+                m = gps_distance_between(prev, signal)
+                ms = signal.ardu_millis - prev.ardu_millis
+                speed = m/ms
+                msg += '\nSpeed (cm/s): ' + str(int(speed*100000))
+                msg += '\nSpeed (km/h): ' + str('%.2f' % (speed*3600))
+            tmp.set_description(msg)
+            point = factory.CreatePoint()
+            pcoord = factory.CreateCoordinates()
+            pcoord.add_latlng(signal.latitude, signal.longitude)
+            point.set_coordinates(pcoord)
+            tmp.set_geometry(point)
+            document.add_feature(tmp)
+            prev = signal
+        document.add_feature(placemark)
+        linestring = factory.CreateLineString()
+        linestring.set_tessellate(True)
+        linestring.set_coordinates(coordinates)
+        placemark.set_geometry(linestring)
+        # Create the KML file
         kml = factory.CreateKml()
-        kml.set_feature(docu)
-        for point in range:
-            pl = factory.CreatePlacemark()
-            pl.set_name(point.id)
-            kmlfile, errors = kmlengine.KmlFile.Create
-#            mg = kmldom.AsMultiGeometry(kmlfile.get_root())
-#            pl.set_geometry(mg)
-#            docu.add_feature(pl)
+        kml.set_feature(document)
         print kmldom.SerializePretty(kml)
 
 
@@ -196,7 +247,7 @@ class Stint(object):
     start_signal = Int()
     stop_signal = Int()
     
-    def __init__(self, start, stop, description="AutoStint"):
+    def __init__(self, start, stop, description=u"AutoStint"):
         self.start_signal = start
         self.stop_signal = stop
         self.description = description
@@ -256,7 +307,7 @@ class LogTextFile(object):
         if verbose:
             print "DB updated. Current size: %d bytes" % os.path.getsize(output_file)
         if stints:
-            stints = db.find_stints()
+            stints = db.find_stints(db_save=True)
             if verbose:
                 print "%d stints have been identified in the new recordset." % len(stints)
 
@@ -325,4 +376,6 @@ def main(argv):
     input.manipulate(**flags)
     
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    db = LogDataBase(fname='/home/mac/Desktop/log/trial.sqlite')
+    db.get_kml(2)
+#    main(sys.argv[1:])
