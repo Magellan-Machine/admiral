@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-Created on 9 Sep 2010
-
-@author: Mac Ryan
-
-@file: Program to monitor and remotely control CircumSail, the autonomous sailing
-robot. The program uses serial communication to interact with the onboard 
-Arduino. 
+Program to monitor and remotely control CircumSail, the autonomous sailing
+robot. The program uses serial communication to interact with the onboard
+Arduino.
 '''
+
+__author__ = "Mac Ryan (mac@magellanmachine.se)"
+__created__ = "2010/09/09"
+__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
+__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
 
 
 import gtk

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Created on 25 Sep 2010
-
-@author: Mac Ryan
-
-@file: Class for eay-interaction with the freerunner.
+Class for eay-interaction with the freerunner.
 '''
+
+__author__ = "Mac Ryan (mac@magellanmachine.se)"
+__created__ = "2010/09/25"
+__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
+__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
+
 
 import os
 import struct

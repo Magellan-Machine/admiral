@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 '''
-Created on 1 Nov 2010
-
-@author: mac
-
-@file: This module doubles as a standalone application, and it is intended
+This module doubles as a standalone application, and it is intended
 to import raw log data files (text lines) into the log database.
 '''
+
+__author__ = "Mac Ryan (mac@magellanmachine.se)"
+__created__ = "2010/11/01"
+__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
+__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
+
 
 import os.path
 import sys

@@ -1,9 +1,13 @@
+# -*- coding: utf-8 -*-
 '''
-Created on 14 Oct 2010
+Provide functionality for creating a wireless bridge using sockets.
+'''
 
-@author: mac
-@file: Provide functionality for creating a wireless bridge using sockets
-'''
+__author__ = "Mac Ryan (mac@magellanmachine.se)"
+__created__ = "2010/10/14"
+__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
+__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
+
 
 import socket
 from commons import *
@@ -23,7 +27,7 @@ class WifiBridge(object):
     def read(self):
         '''
         Read messages from the wifi bridge.
-        
+
         Can return:
         - None               : no message present
         - data, (host, port) : if the server is not linked to a client
@@ -45,8 +49,8 @@ class WifiBridge(object):
             if msg == 'pong':
                 return None
             else:
-                return msg    
-    
+                return msg
+
     def write(self, data, server=None):
         if server == None:
             server = self.remote_address

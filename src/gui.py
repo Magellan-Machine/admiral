@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Created on 28 Sep 2010
-
-@author: Mac Ryan
-
-@file: Provide context-aware GUI's for interacting with the program.
+Provide context-aware GUI's for interacting with the program.
 '''
+
+__author__ = "Mac Ryan (mac@magellanmachine.se)"
+__created__ = "2010/09/28"
+__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
+__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
+
 
 import gobject, pango, gtk
 import boat, wifibridge
@@ -16,11 +18,11 @@ from freerunner import FreeRunner
 
 
 class NumericMonitor(object):
-    
+
     '''
     Generate a window showing all the proprieties of the boat.
     '''
-    
+
     def __init__(self, boat, menuitem):
         self.boat = boat
         self.menuitem = menuitem
@@ -70,7 +72,7 @@ class NumericMonitor(object):
         self.window.set_resizable(False)
         self.window.connect("delete_event", self.on_nm_delete)
         self.window.show_all()
-        
+
     def update_values(self):
         for k in self.textboxes.keys():
             value = getattr(self.boat, LOG_SIGNALS[k][0])
@@ -83,7 +85,7 @@ class NumericMonitor(object):
 
 
 class GeneralControlPanel(object):
-    
+
     '''
     Abstract class that serves as an ancestor for the computer e freerunner
     specific interfaces.
@@ -99,25 +101,25 @@ class GeneralControlPanel(object):
         self.window = self.builder.get_object("window")
         self.logfile = open(LOG_RAW_FNAME, 'a', 1)
         self.last_logged_msg = None
-        
+
     def do_log(self):
         if self.boat.last_msg != self.last_logged_msg:
             self.logfile.write(str(time()) + " " + self.boat.last_msg + "\n")
             self.last_logged_msg = self.boat.last_msg
-    
+
     def on_window_destroy(self, widget):
         '''
         Works as far as you follow conventions...
         '''
         gtk.main_quit()
-        
+
 
 class ComputerControlPanel(GeneralControlPanel):
-    
+
     '''
     Provide the visual environment for interacting with the boat from the PC.
     '''
-    
+
     def __init__(self):
         self.boat = boat.BareBoat()
         self.gui_file = "../data/computer-gui.xml"
@@ -132,14 +134,14 @@ class ComputerControlPanel(GeneralControlPanel):
         self.remote_ip_widget = self.builder.get_object("remote_ip")
         self.remote_port_widget = self.builder.get_object("remote_port")
         self.about_dialogue = self.builder.get_object("about_dialogue")
-        
+
         # The following bit replace the placeholder drawing area with the scene
         tmp = self.builder.get_object("drawingarea")
         tmp.destroy()
         self.scene = Scene(self.boat)
         box = self.builder.get_object("frame1")
         box.add(self.scene)
-        
+
         gobject.timeout_add(10, self.serial_monitor)
         gobject.timeout_add(30, self.scene.redraw)
         self.on_ms_radio_toggled(None) # Initialise the values
@@ -150,7 +152,7 @@ class ComputerControlPanel(GeneralControlPanel):
 
         self.window.resize(900, 640)
         self.window.show_all()
-    
+
     def serial_monitor(self):
         msg = self.boat.poll_message()
         if msg != None and msg[0] != '!':
@@ -168,14 +170,14 @@ class ComputerControlPanel(GeneralControlPanel):
 
     def on_command_button_clicked(self, widget):
         self.boat.send_command(self.command_line.get_text())
- 
+
     def on_set_log_speed_button_clicked(self, widget):
         tmp = self.logging_adjustment
         self.boat.send_command(SET_LOG_INTERVAL, int(tmp.value*tmp.multiplier))
-    
+
     def on_stop_logging_button_clicked(self, widget):
         self.boat.send_command(SET_LOG_INTERVAL, 0)
-    
+
     def on_ms_radio_toggled(self, widget):
         a = self.logging_adjustment
         a.value          = 100
@@ -183,7 +185,7 @@ class ComputerControlPanel(GeneralControlPanel):
         a.upper          = 1000
         a.step_increment = 50
         a.multiplier      = -1
-    
+
     def on_s_radio_toggled(self, widget):
         a = self.logging_adjustment
         a.value          = 1
@@ -191,7 +193,7 @@ class ComputerControlPanel(GeneralControlPanel):
         a.upper          = 60
         a.step_increment = 1
         a.multiplier      = 1
-        
+
     def on_m_radio_toggled(self, widget):
         a = self.logging_adjustment
         a.value          = 1
@@ -199,19 +201,19 @@ class ComputerControlPanel(GeneralControlPanel):
         a.upper          = 60
         a.step_increment = 1
         a.multiplier     = 1000
-    
+
     def on_rc_button_toggled(self, widget):
         self.boat.send_command(SET_PILOT_MODE, RC)
 
     def on_autopilot_button_toggled(self, widget):
         self.boat.send_command(SET_PILOT_MODE, AUTO)
-    
+
     def on_computer_pilot_button_toggled(self, widget):
         self.boat.send_command(SET_PILOT_MODE, COMPUTER)
-               
+
     def on_off_pilot_button_toggled(self, widget):
         self.boat.send_command(SET_PILOT_MODE, OFF)
-        
+
     def on_sail_winch_adjustment_value_changed(self, widget):
         if self.boat.pilot_mode != COMPUTER:
             return # Avoid an infinite loop
@@ -233,11 +235,11 @@ class ComputerControlPanel(GeneralControlPanel):
         if self.remote_port_widget.get_text() == '':
             self.remote_port_widget.set_text('5000')
         self.remote_uri_dialogue.show()
-        
+
     def on_remote_boat_win_dialogue_delete_event(self, widget):
         widget.hide_on_delete()
         return True
-        
+
     def on_boat_uri_button_clicked(self, widget):
         host = self.remote_ip_widget.get_text()
         port = int(self.remote_port_widget.get_text())
@@ -249,29 +251,29 @@ class ComputerControlPanel(GeneralControlPanel):
             self.boat = remote_boat
             self.remote_uri_dialogue.hide()
             self.scene.change_boat(self.boat)
-        
+
     def on_disconnect_menu_item_activate(self, widget):
         print "disconnect"
-        
+
     def on_log_activate_item(self, widget):
         print "log"
-        
+
     def on_wifi_activate_item(self, widget):
         print "wifi"
-        
+
     def on_serial_activate_item(self, widget):
         print "serial"
-        
+
     def on_about_menu_item_activate(self, widget):
         self.about_dialogue.show()
-        
+
     def on_about_dialogue_delete_event(self, widget):
         self.about_dialogue.hide()
         return True
 
     def on_about_dialogue_response(self, widget):
         self.about_dialogue.hide()
-        
+
     def on_numeric_monitor_toggled(self, widget):
         if widget.get_active():
             if self.nm == None:
@@ -283,8 +285,8 @@ class ComputerControlPanel(GeneralControlPanel):
 
     def on_debug_mode_toggled(self, widget):
         self.debug_mode = widget.get_active()
-        
-        
+
+
 class FreeRunnerControlPanel(GeneralControlPanel):
 
     def __init__(self):
@@ -299,9 +301,9 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         self.all_buttons.append(self.builder.get_object("wireless_watchdog"))
         self.all_buttons.append(self.builder.get_object("use_accelerometer"))
         self.all_buttons.append(self.builder.get_object("quit_button"))
-        self.all_buttons.append(self.builder.get_object("run_button"))        
-        self.all_buttons.append(self.builder.get_object("use_gps"))        
-        self.all_buttons.append(self.builder.get_object("battery_info"))        
+        self.all_buttons.append(self.builder.get_object("run_button"))
+        self.all_buttons.append(self.builder.get_object("use_gps"))
+        self.all_buttons.append(self.builder.get_object("battery_info"))
         # The following bit replace the placeholder drawing area with the scene
         tmp = self.builder.get_object("drawingarea")
         self.scene = LockScreen(self._set_button_sensitivity)
@@ -311,7 +313,7 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         # Each subsystem has its name, name in self.active_system
         # set indicates the system is active. self.active_systems is passed
         # to the instance of FreeRunner. All systems are initially OFF
-        self.active_systems = set() 
+        self.active_systems = set()
         self.run_mode = False
         self.logging_mode = False
         self.wifi = None
@@ -319,7 +321,7 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         gobject.timeout_add(10, self.loop)
         self.window.maximize()
         self.window.show_all()
-        
+
     def _set_button_sensitivity(self, status):
         '''
         Allow to change sensitivity of all buttons on screen.
@@ -332,11 +334,11 @@ class FreeRunnerControlPanel(GeneralControlPanel):
         Executes callbacks if the program is in runmode (button on the GUI)
         '''
         if self.run_mode == True:
-            # WiFi ops (including Watchdog) 
+            # WiFi ops (including Watchdog)
             if self.wifi:
                 wifi_msg = self.wifi.read()
                 if wifi_msg:
-                    self.boat.send_command(wifi_msg) 
+                    self.boat.send_command(wifi_msg)
                 if self.wifi.remote_address:
                     if self.last_sent_wifi_message != self.boat.last_msg:
                         self.wifi.write(self.boat.last_msg)
@@ -382,7 +384,7 @@ class FreeRunnerControlPanel(GeneralControlPanel):
 
     def on_battery_info_toggled(self, widget):
         self._subsystem('battery_info', widget)
-        
+
     def on_wireless_watchdog_toggled(self, widget):
         self.watchdog = True if widget.get_active() else False
 

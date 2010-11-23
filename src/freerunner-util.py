@@ -1,24 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-Created on 25 Sep 2010
-
-@author: Mac Ryan
-
-@file:
 Provide a mini-touch-screen-friendly GUI for doing routine operations on the
 OpenMoko FreeRunner.
 '''
+
+__author__ = "Mac Ryan (mac@magellanmachine.se)"
+__created__ = "2010/09/25"
+__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
+__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
+
 
 import gtk
 from freerunner import FreeRunner
 
 class FreeRunnerControlPanel(object):
-    
+
     '''
     Provide the visual environment for interacting with the boat.
     '''
-    
+
     def __init__(self):
         # Various
         self.fr = FreeRunner()
@@ -33,7 +34,7 @@ class FreeRunnerControlPanel(object):
         self.op_in_progress = builder.get_object("op_in_progress")
         self.connect_button = builder.get_object("connect")
         self.window         = builder.get_object("window")
-        
+
         # Button extension and initialisation
         self.usb_toggle.fr_attribute = "usb_mode"
         self.usb_toggle.alternatives = (('I am a DEVICE', 'device'), ('I am a HOST', 'host'))
@@ -53,13 +54,13 @@ class FreeRunnerControlPanel(object):
         Helper method that connects a toggle button to a FreeRunner propriety
 
         each toggable widget has a "fr_attribute" and two couples of
-        button_label/attr_value, the first of which refers to the 
+        button_label/attr_value, the first of which refers to the
         "button up" state.
         '''
         label, value = widget.alternatives[widget.get_active()]
         setattr(self.fr, widget.fr_attribute, value)
         widget.set_label(label)
-        
+
     def throbber(self, func):
         '''
         Helper method that execute a routine while displaying a "throbber"
@@ -72,30 +73,30 @@ class FreeRunnerControlPanel(object):
             func()
         finally:
             self.op_in_progress.hide()
-        
+
     def on_usb_toggle_toggled(self, widget):
         self.toggler(widget)
-    
+
     def on_power_toggle_toggled(self, widget):
         self.toggler(widget)
-        
+
     def on_select_wifi_clicked(self, widget):
         self.network_index = (self.network_index + 1) % len(self.fr.configured_networks)
         network = self.fr.configured_networks[self.network_index]
         widget.set_label("Connect to " + network +
                          "\n(click to change)")
         self.connect_button.set_sensitive(True)
-    
+
     def on_connect_clicked(self, widget):
         self.fr.connect_to_network(self.fr.configured_networks[self.network_index])
         widget.set_sensitive(False)
-    
+
     def on_window_destroy(self, widget, data=None):
         gtk.main_quit()
 
     def on_quit_clicked(self, widget):
         gtk.main_quit()
-        
+
 
 if __name__ == '__main__':
     app = FreeRunnerControlPanel()

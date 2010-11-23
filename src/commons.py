@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-Created on 15 Sep 2010
-
-@author: Mac Ryan
-
-@file: Common imports and constant definitions.
+Common imports and constant definitions.
 '''
 
-# -----------------------------------------------------------------------------
+__author__ = "Mac Ryan (mac@magellanmachine.se)"
+__created__ = "2010/09/15"
+__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
+__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
+
+# ----------------------------------------------------------------------------
 # --- COMMON IMPORT TO ALL MODULES
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 from time import time
 import math
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # --- CONSTANTS
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 # Commands
 SET_LOG_INTERVAL          =  "I"
@@ -48,9 +49,9 @@ WIFI_PORT                 = 5000
 LOG_RAW_FNAME             = "../data/raw.log"
 LOG_CLEAN_FNAME           = "../data/clean.log"
 LOG_DB_FNAME              = "../data/log.sqlite"
-LOG_PATH_FNAME            = "../data/path_"   # stint-number and extension to be appended 
+LOG_PATH_FNAME            = "../data/path_"   # to append: stint# and extension
 STINT_MINIMUM_LENGTH      = 30     # in seconds
-STINT_MAX_STILL_TIME      = 5      # in seconds 
+STINT_MAX_STILL_TIME      = 5      # in seconds
 STINT_SPEED_THRESHOLD     = 0.1    # in m/s
 EARTH_RADIUS              = 6371   # in Km
 
@@ -80,11 +81,11 @@ LOG_SIGNALS = {
             'x' : ('magnetic_x', '-', 'INTEGER'),         # TODO: Remove when accel on arduino
             'y' : ('magnetic_y', '-', 'INTEGER'),         # TODO: Remove when accel on arduino
             'z' : ('magnetic_z', '-', 'INTEGER'),         # TODO: Remove when accel on arduino
-            
+
             'a' : ('accelerometer_x', '-', 'INTEGER'),    # TODO: Remove when accel on arduino
             'b' : ('accelerometer_y', '-', 'INTEGER'),    # TODO: Remove when accel on arduino
             'c' : ('accelerometer_z', '-', 'INTEGER'),    # TODO: Remove when accel on arduino
-            
+
             'u' : ('ardu_used_voltage', 'mV', 'INTEGER'),
             'i' : ('ardu_used_current', 'mA', 'INTEGER'),
             'p' : ('ardu_used_power', 'mW', 'INTEGER'),
@@ -98,16 +99,16 @@ LOG_SIGNALS = {
 def gps_distance_between(point_a, point_b):
     '''
     Calculate the orthodromic distance between two GPS readings.
-   
+
     point_a and point_b can be either of the two:
     - tuples in the form (latitude, longitude).
     - instances of the class logwork.Signal
     The result is in metres.
-    
-    ATTENTION: since latitude is given before longitude, if we are using the 
+
+    ATTENTION: since latitude is given before longitude, if we are using the
     X and Y representation, then we must pass in (Y, X) and *not* (X, Y)
-    
-    Computed with the Haversine formula 
+
+    Computed with the Haversine formula
     (http://en.wikipedia.org/wiki/Haversine_formula)
     '''
     if hasattr(point_a, 'latitude'):

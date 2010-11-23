@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-Created on 15 Sep 2010
-
-@author: Mac Ryan
-
-@file: Various classes needed to render the graphic part of the dashboard when
+Various classes needed to render the graphic part of the dashboard when
 operating the software on a PC [On a free-runner these classes are unused].
 '''
+
+__author__ = "Mac Ryan (mac@magellanmachine.se)"
+__created__ = "2010/09/15"
+__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
+__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
+
 
 from lib import graphics
 from lib.pytweener import Easing
@@ -53,7 +55,7 @@ class Scene(graphics.Scene):
         self.gravityvector_sprite = VectorSprite(self.gravitybox_sprite)
         self.add_child(self.gravityvector_sprite)
         self.magnetbox_sprite = VectorBoxSprite(1, "#00FF00")
-        self.add_child(self.magnetbox_sprite)        
+        self.add_child(self.magnetbox_sprite)
         self.magnetvector_sprite = VectorSprite(self.magnetbox_sprite)
         self.add_child(self.magnetvector_sprite)
         # FreeRunner Battery Level
@@ -62,10 +64,10 @@ class Scene(graphics.Scene):
         self.battery_value.anchor_y = -25
         self.add_child(self.battery_value)
         self.connect("on-enter-frame", self.on_enter_frame)
-        
+
     def change_boat(self, boat):
         '''
-        Hot-swap the boat being rendered on screen. 
+        Hot-swap the boat being rendered on screen.
         '''
         self.boat = boat
 
@@ -99,14 +101,14 @@ class Scene(graphics.Scene):
 
 
 class PingBeatSprite(graphics.Sprite):
-    
+
     def __init__(self):
         graphics.Sprite.__init__(self, 4, 4)
         self.connect("on-render", self.on_render)
         self.anchor_x = 30
         self.anchor_y = 55
         self.alpha = 1
-    
+
     def on_render(self, sprite):
         self.graphics.clear()
         self.graphics.circle(2, 2, 2)
@@ -115,13 +117,13 @@ class PingBeatSprite(graphics.Sprite):
 
 
 class SailSprite(graphics.Sprite):
-    
+
     def __init__(self):
         graphics.Sprite.__init__(self, 20, 20)
         self.connect("on-render", self.on_render)
         self.anchor_x = 10
         self.anchor_y = 20
-    
+
     def on_render(self, sprite):
         self.graphics.clear()
         self.graphics.set_line_style(1)
@@ -131,19 +133,19 @@ class SailSprite(graphics.Sprite):
 
 
 class RudderSprite(graphics.Sprite):
-    
+
     def __init__(self):
         graphics.Sprite.__init__(self, 4, 30, pivot_x=2, pivot_y=8)
         self.connect("on-render", self.on_render)
         self.anchor_x = 2
         self.anchor_y = -30
-    
+
     def on_render(self, sprite):
         self.graphics.clear()
         self.graphics.rectangle(0, 0, 4, 30, 2)
         self.graphics.fill(self.my_color)
-        
-        
+
+
 class NeedleSprite(graphics.Sprite):
 
     def __init__(self, offset=0, color="#000000"):
@@ -152,7 +154,7 @@ class NeedleSprite(graphics.Sprite):
         self.anchor_x = -50
         self.anchor_y = 45 - offset*25
         self.my_color = color
-    
+
     def on_render(self, sprite):
         self.graphics.clear()
         self.graphics.rectangle(-1, -10, 2, 10, 0)
@@ -168,7 +170,7 @@ class VectorBoxSprite(graphics.Sprite):
         self.anchor_x = -75
         self.anchor_y = 45 - offset*25
         self.my_color = color
-    
+
     def on_render(self, sprite):
         self.graphics.clear()
         self.graphics.set_line_style(1)
@@ -189,7 +191,7 @@ class VectorSprite(graphics.Sprite):
         self.my_color = box_sprite.my_color
         self.vector   = (0, 0, 0)
         self.vector_scale = x / 2.0 / 1000 # half of width of box by signal max value
-    
+
     def on_render(self, sprite):
         self.graphics.clear()
         self.vector = map(lambda x : mul(x, self.vector_scale), self.vector)
@@ -201,11 +203,11 @@ class VectorSprite(graphics.Sprite):
         self.graphics.fill(col)
 
 class LockScreen(graphics.Scene):
-    
+
     '''
     iPhone-like lock screen widget for the FreeRunner.
     '''
-    
+
     def __init__(self, callback):
         self.callback = callback
         self.notch_h = 50
@@ -237,7 +239,7 @@ class Notch(graphics.Sprite):
         self.unlocked = True
         self.draggable = True   # allow dragging
         self.render()
-        
+
     def render(self):
-        self.graphics.rectangle(-LS_NOTCH_W, -self.notch_h, LS_NOTCH_W*2, self.notch_h*2, 5) 
+        self.graphics.rectangle(-LS_NOTCH_W, -self.notch_h, LS_NOTCH_W*2, self.notch_h*2, 5)
         self.graphics.fill(LS_COLORS[self.unlocked])
