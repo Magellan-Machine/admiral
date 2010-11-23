@@ -22,7 +22,7 @@ rm -Rf /tmp/admiral-docs
 # track changes and pushes them to the server
 git add *.html *.js objects.inv _static/* _sources/*
 git commit -m "automatic documentation sync"
-#git push
+git push
 
 # revert to normal editing mode
 git checkout master

@@ -1,18 +1,23 @@
-.. Admiral documentation master file, created by
-   sphinx-quickstart on Tue Nov 23 18:29:59 2010.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to Admiral's documentation!
 ===================================
 
-Contents:
+At the moment, the documentation for the Admiral project is limited to an 
+automatic build from the inline documentation of the source code.
 
 .. toctree::
    :maxdepth: 2
 
-Indices and tables
-==================
+   main
+   boat
+   log
+   wifibridge
+   freerunner
+   freerunnerutil
+   commons
+   graphics
+   gui
+
+You can also use the indexes to browse through the modules and classes
 
 * :ref:`genindex`
 * :ref:`modindex`
