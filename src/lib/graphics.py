@@ -86,9 +86,15 @@ class Geometry(object):
         def __init__(self, x=0, y=0, w=0, h=0):
             if isinstance(x, geom.Rectangle):
                 # allow cloning rectangles rect = Rectangle(rect)
-                self.x, self.y, self.w, self.h = x.x, x.y, x.w, x,h
+                self.x, self.y, self.w, self.h = x.x, x.y, x.w, x.h
             else:
                 self.x, self.y, self.w, self.h = x, y, w, h
+
+        def __repr__(self):
+            return "<%s %d (%d, %d, %d, %d)>" % (self.__class__.__name__, id(self), self.x, self.y, self.w, self.h)
+
+        def __nonzero__(self):
+            return any((self.x, self.y, self.w, self.h))
 
         @property
         def left(self): return self.x
@@ -124,6 +130,9 @@ class Geometry(object):
             return self.w * self.h
 
         def union(self, rect2):
+            if not rect2 or not self:
+                return geom.Rectangle(self) or geom.Rectangle(rect2)
+
             x, x2 = min(self.left, rect2.left), max(self.right, rect2.right)
             y, y2 = min(self.top, rect2.top), max(self.bottom, rect2.bottom)
             return geom.Rectangle(x, y, x2-x, y2-y)
@@ -131,6 +140,9 @@ class Geometry(object):
         def intersection(self, rect2):
             """returns intersecting area of two rectangles or None if rectangles are not
             intersecting"""
+            if not rect2 or not self:
+                return geom.Rectangle(self) or geom.Rectangle(rect2)
+
             x, x2 = max(self.left, rect2.left), min(self.right, rect2.right)
             y, y2 = max(self.top, rect2.top), min(self.bottom, rect2.bottom)
 
@@ -138,6 +150,19 @@ class Geometry(object):
                 return None
             else:
                 return geom.Rectangle(x, y, x2-x, y2-y)
+
+        def contains(self, target):
+            """checks if our rectangle contains the target. Target can be
+               either another rectangle, x, y coordinates or an (x,y) tuple
+            """
+            if isinstance(target, geom.Rectangle):
+                return all((self.left < target.left,
+                            self.right > target.right,
+                            self.top < target.top,
+                            self.bottom > target.bottom))
+            else:
+                return self.left < target[0] < self.right and \
+                       self.top < target[1] < self.bottom
 
 geom = Geometry()
 
@@ -480,28 +505,6 @@ class Graphics(object):
         """
         self._add_instruction(self._show_layout, text, font_desc, alignment, width, wrap, ellipsize)
 
-    def _remember_path(self, context, instruction):
-        context.save()
-        context.identity_matrix()
-
-        path = context.copy_path()
-        if str(path):
-            if instruction in (self._fill, self._fill_preserve):
-                new_extents = context.path_extents()
-            else:
-                new_extents = context.stroke_extents()
-
-            self.extents = self.extents or new_extents
-            self.extents = (min(self.extents[0], new_extents[0]),
-                            min(self.extents[1], new_extents[1]),
-                            max(self.extents[2], new_extents[2]),
-                            max(self.extents[3], new_extents[3]))
-
-            self.paths.append(path)
-
-        context.restore()
-
-
     def _add_instruction(self, function, *params):
         if self.context:
             function(self.context, *params)
@@ -510,16 +513,13 @@ class Graphics(object):
             self.__new_instructions.append((function, params))
 
 
-    def _draw(self, context, opacity, with_extents = False):
+    def _draw(self, context, opacity):
         """draw accumulated instructions in context"""
 
         # if we have been moved around, we should update bounds
-        check_extents = with_extents and (context.get_matrix() != self._last_matrix or not self.paths)
-        if check_extents:
-            self.paths = deque()
-            self.extents = None
-
         if self.__new_instructions: #new stuff!
+            self.paths = deque()
+
             self.__instruction_cache = deque()
             current_color = None
             current_line = None
@@ -555,13 +555,14 @@ class Graphics(object):
                 elif instruction in (self._new_path, self._stroke, self._fill,
                                      self._stroke_preserve,
                                      self._fill_preserve, self._clip):
-                    self.__instruction_cache.append((context.copy_path(),
+                    path = context.copy_path()
+                    self.paths.append(path)
+                    self.__instruction_cache.append((path,
                                                      current_color,
                                                      current_line,
                                                      instruction, ()))
                     instruction_cache = []
-                    if check_extents:
-                        self._remember_path(context, instruction)
+
                 else:
                     # the rest are non-special
                     instruction_cache.append((instruction, args))
@@ -575,8 +576,8 @@ class Graphics(object):
 
 
             # last one
-            if check_extents and instruction not in (self._fill, self._stroke, self._fill_preserve, self._stroke_preserve):
-                self._remember_path(context, self._fill)
+            if instruction not in (self._fill, self._stroke, self._fill_preserve, self._stroke_preserve):
+                self.paths.append(context.copy_path())
 
             # also empty the temporary cache that was not met by a stroke at the end
             while instruction_cache: # stroke is missing so we just cache
@@ -598,8 +599,6 @@ class Graphics(object):
 
                 if path:
                     context.append_path(path)
-                    if check_extents:
-                        self._remember_path(context, self._fill)
 
                 if instruction:
                     if instruction == self._paint and opacity < 1:
@@ -607,11 +606,6 @@ class Graphics(object):
                     else:
                         instruction(context, *args)
 
-            if check_extents and instruction not in (self._fill, self._stroke, self._fill_preserve, self._stroke_preserve):
-                # last one
-                self._remember_path(context, self._fill)
-
-        self._last_matrix = context.get_matrix()
 
 
     def _draw_as_bitmap(self, context, opacity):
@@ -638,11 +632,16 @@ class Graphics(object):
             # instructions that end path
             path_end_instructions = (self._new_path, self._clip, self._stroke, self._fill, self._stroke_preserve, self._fill_preserve)
 
-            # measure the path extents so we know the size of surface
+            # measure the path extents so we know the size of cache surface
             # also to save some time use the context to paint for the first time
+            extents = geom.Rectangle()
             for instruction, args in self.__instruction_cache:
                 if instruction in path_end_instructions:
-                    self._remember_path(context, instruction)
+                    self.paths.append(context.copy_path())
+
+                    ext = context.stroke_extents()
+                    extents = extents.union(geom.Rectangle(ext[0], ext[1], ext[2]-ext[0], ext[3]-ext[1]))
+
 
                 if instruction in (self._set_source_pixbuf, self._set_source_surface):
                     # draw a rectangle around the pathless instructions so that the extents are correct
@@ -660,7 +659,10 @@ class Graphics(object):
 
 
             if instruction not in path_end_instructions: # last one
-                self._remember_path(context, self._fill)
+                self.paths.append(context.copy_path())
+
+                ext = context.stroke_extents()
+                extents = extents.union(geom.Rectangle(ext[0], ext[1], ext[2]-ext[0], ext[3]-ext[1]))
 
 
             # avoid re-caching if we have just moved
@@ -668,13 +670,19 @@ class Graphics(object):
                               matrix and self._last_matrix \
                               and all([matrix[i] == self._last_matrix[i] for i in range(4)])
 
+            # TODO - this does not look awfully safe
+            extents.x += matrix[4]
+            extents.y += matrix[5]
+            self.extents = extents
+
             if not just_transforms:
+
                 # now draw the instructions on the caching surface
-                w = int(self.extents[2] - self.extents[0]) + 1
-                h = int(self.extents[3] - self.extents[1]) + 1
+                w = int(extents.w) + 1
+                h = int(extents.h) + 1
                 self.cache_surface = context.get_target().create_similar(cairo.CONTENT_COLOR_ALPHA, w, h)
                 ctx = gtk.gdk.CairoContext(cairo.Context(self.cache_surface))
-                ctx.translate(-self.extents[0], -self.extents[1])
+                ctx.translate(-extents.x, -extents.y)
 
                 ctx.transform(matrix)
                 for instruction, args in self.__instruction_cache:
@@ -684,7 +692,7 @@ class Graphics(object):
         else:
             context.save()
             context.identity_matrix()
-            context.translate(self.extents[0], self.extents[1])
+            context.translate(self.extents.x, self.extents.y)
             context.set_source_surface(self.cache_surface)
             if opacity < 1:
                 context.paint_with_alpha(opacity)
@@ -712,8 +720,7 @@ class Sprite(gtk.Object):
         "on-drag-start": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,)),
         "on-drag": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,)),
         "on-drag-finish": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,)),
-        "on-render": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
-        "on-move": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        "on-render": (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())
     }
     def __init__(self, x = 0, y = 0,
                  opacity = 1, visible = True,
@@ -787,9 +794,13 @@ class Sprite(gtk.Object):
         #: to rounding errors in positioning.
         self.snap_to_pixel = snap_to_pixel
 
-        self._last_matrix = None
-
         self.__dict__["_sprite_dirty"] = True # flag that indicates that the graphics object of the sprite should be rendered
+
+        self._matrix = None
+        self._prev_parent_matrix = None
+
+        self._extents = None
+
 
     def __setattr__(self, name, val):
         try:
@@ -799,8 +810,22 @@ class Sprite(gtk.Object):
                 return
             self.__dict__[name] = val
 
+            if name == '_prev_parent_matrix':
+                self.__dict__['_extents'] = None
+                for sprite in self.sprites:
+                    sprite._prev_parent_matrix = None
+                return
+
+
+            if name in ('x', 'y', 'rotation', 'scale_x', 'scale_y', 'pivot_x', 'pivot_y'):
+                self.__dict__['_matrix'] = None
+                self.__dict__['_extents'] = None
+                for sprite in self.sprites:
+                    sprite._prev_parent_matrix = None
+
+
             if name not in ('x', 'y', 'rotation', 'scale_x', 'scale_y',
-                            'opacity', 'visible', 'z_order', 'drag_x', 'drag_y'):
+                            'opacity', 'visible', 'z_order', 'drag_x', 'drag_y', '_matrix', '_extents'):
                 self.__dict__["_sprite_dirty"] = True
 
             if name == 'opacity' and self.__dict__.get("cache_as_bitmap") and self.__dict__.get("graphics"):
@@ -813,8 +838,6 @@ class Sprite(gtk.Object):
             elif name == 'z_order' and self.__dict__.get('parent'):
                 self.parent._sort()
 
-            if name in ('x', 'y'):
-                self.emit("on-move")
         else:
             setter(self, val)
 
@@ -831,7 +854,7 @@ class Sprite(gtk.Object):
             if sprite == self:
                 raise Exception("trying to add sprite to itself")
             if sprite.parent:
-                sprite.x, sprite.y = self.from_scene_coords(*sprite.to_scene_coords(0, 0))
+                sprite.x, sprite.y = self.from_scene_coords(*sprite.to_scene_coords())
                 sprite.parent.remove_child(sprite)
 
             self.sprites.append(sprite)
@@ -858,22 +881,54 @@ class Sprite(gtk.Object):
             return
         self.z_order = self.parent.sprites[0].z_order - 1
 
+
+    def get_extents(self):
+        """measure the extents of the sprite's graphics. if context is provided
+           will use that to draw the paths"""
+        if self._extents:
+            return self._extents
+
+        context = cairo.Context(cairo.ImageSurface(cairo.FORMAT_A1, 0, 0))
+
+
+        context.transform(self.get_matrix())
+
+
+        for path in self.graphics.paths:
+            context.append_path(path)
+        context.identity_matrix()
+
+        ext = context.stroke_extents()
+
+
+
+        ext = geom.Rectangle(ext[0], ext[1],
+                             ext[2] - ext[0],
+                             ext[3] - ext[1])
+
+        self._extents = ext
+        return ext
+
+
+
+
     def check_hit(self, x, y):
         """check if the given coordinates are inside the sprite's fill or stroke
            path"""
-        if not self.graphics.extents:
+
+        extents = self.get_extents()
+
+        if not extents:
             return False
 
-        sprite_x, sprite_y, sprite_x2, sprite_y2 = self.graphics.extents
-
-        if sprite_x <= x <= sprite_x2 and sprite_y <= y <= sprite_y2:
-            paths = self.graphics.paths
-            if not paths:
-                return True
-
+        if extents.left <= x <= extents.right and extents.top <= y <= extents.bottom:
             context = cairo.Context(cairo.ImageSurface(cairo.FORMAT_A1, 0, 0))
-            for path in paths:
+            context.transform(self.get_matrix())
+            for path in self.graphics.paths:
                 context.append_path(path)
+            context.identity_matrix()
+
+
             return context.in_fill(x, y)
         else:
             return False
@@ -911,22 +966,39 @@ class Sprite(gtk.Object):
         if scene:
             scene.animate(self, duration, easing, on_complete, on_update, **kwargs)
 
+    def get_local_matrix(self):
+        if not self._matrix:
+            self._matrix = cairo.Matrix()
+
+            if self.snap_to_pixel:
+                self._matrix.translate(int(self.x) + int(self.pivot_x), int(self.y) + int(self.pivot_y))
+            else:
+                self._matrix.translate(self.x + self.pivot_x, self.y + self.pivot_y)
+
+            if self.rotation:
+                self._matrix.rotate(self.rotation)
+
+
+            if self.snap_to_pixel:
+                self._matrix.translate(int(-self.pivot_x), int(-self.pivot_y))
+            else:
+                self._matrix.translate(-self.pivot_x, -self.pivot_y)
+
+
+            if self.scale_x != 1 or self.scale_y != 1:
+                self._matrix.scale(self.scale_x, self.scale_y)
+
+        return cairo.Matrix() * self._matrix
+
+
     def get_matrix(self):
         """return sprite's current transformation matrix"""
-        chain = []
-        sprite = self
-        while sprite and isinstance(sprite, Scene) == False: #go up to the one before the last one
-            chain.append(sprite)
-            sprite = sprite.parent
+        if self.parent:
+            return self.get_local_matrix() * (self._prev_parent_matrix or self.parent.get_matrix())
 
-        matrix = cairo.Matrix()
-        for sprite in reversed(chain):
-            matrix.translate(sprite.x + sprite.pivot_x, sprite.y + sprite.pivot_y)
-            matrix.rotate(sprite.rotation)
-            matrix.translate(-sprite.pivot_x, -sprite.pivot_y)
-            matrix.scale(sprite.scale_x, sprite.scale_y)
+        else:
+            return self.get_local_matrix()
 
-        return matrix
 
     def from_scene_coords(self, x=0, y=0):
         """Converts x, y given in the scene coordinates to sprite's local ones
@@ -937,59 +1009,39 @@ class Sprite(gtk.Object):
 
     def to_scene_coords(self, x=0, y=0):
         """Converts x, y from sprite's local coordinates to scene coordinates"""
-        matrix = self.get_matrix()
-        return matrix.transform_point(x, y)
+        return self.get_matrix().transform_point(x, y)
 
-    def _draw(self, context, opacity = 1):
+    def _draw(self, context, opacity = 1, parent_matrix = None):
         if self.visible is False:
             return
 
-        context.new_path()
-
         if (self._sprite_dirty): # send signal to redo the drawing when sprite is dirty
+            self.__dict__['_extents'] = None
             self.emit("on-render")
             self.__dict__["_sprite_dirty"] = False
 
 
-        if any((self.x, self.y, self.rotation, self.scale_x, self.scale_y)):
-            context.save()
+        parent_matrix = parent_matrix or cairo.Matrix()
 
-            if any((self.x, self.y, self.pivot_x, self.pivot_y)):
-                if self.snap_to_pixel:
-                    context.translate(int(self.x) + int(self.pivot_x), int(self.y) + int(self.pivot_y))
-                else:
-                    context.translate(self.x + self.pivot_x, self.y + self.pivot_y)
+        # cache parent matrix
+        if parent_matrix != self._prev_parent_matrix:
+            self._prev_parent_matrix = parent_matrix
 
-            if self.rotation:
-                context.rotate(self.rotation)
-
-            if self.pivot_x or self.pivot_y:
-                if self.snap_to_pixel:
-                    context.translate(int(-self.pivot_x), int(-self.pivot_y))
-                else:
-                    context.translate(-self.pivot_x, -self.pivot_y)
-
-            if self.scale_x != 1 or self.scale_y != 1:
-                context.scale(self.scale_x, self.scale_y)
-
-
-        matrix = context.get_matrix()
-        if self._last_matrix and matrix != self._last_matrix:
-            self.emit("on-move")
+        matrix = self.get_local_matrix()
+        context.save()
+        context.transform(matrix)
 
 
         if self.cache_as_bitmap:
             self.graphics._draw_as_bitmap(context, self.opacity * opacity)
         else:
-            self.graphics._draw(context, self.opacity * opacity, self.interactive or self.draggable)
+            self.graphics._draw(context, self.opacity * opacity)
 
         for sprite in self.sprites:
-            sprite._draw(context, self.opacity * opacity)
+            sprite._draw(context, self.opacity * opacity, parent_matrix * matrix)
 
-        self.__dict__['_last_matrix'] = matrix
 
-        if any((self.x, self.y, self.rotation, self.scale_x, self.scale_y)):
-            context.restore()
+        context.restore()
 
         context.new_path() #forget about us
 
@@ -1025,7 +1077,7 @@ class BitmapSprite(Sprite):
                 self.__dict__['_image_width'] = self.image_data.get_width()
                 self.__dict__['_image_height'] = self.image_data.get_height()
 
-    def _draw(self, context, opacity = 1):
+    def _draw(self, context, opacity = 1, parent_matrix = None):
         if self.image_data is None or self.width is None or self.height is None:
             return
 
@@ -1050,7 +1102,7 @@ class BitmapSprite(Sprite):
             self._surface = surface
 
 
-        Sprite._draw(self,  context, opacity)
+        Sprite._draw(self,  context, opacity, parent_matrix)
 
 
 class Image(BitmapSprite):
@@ -1610,6 +1662,7 @@ class Scene(gtk.DrawingArea):
     # these two mimic sprite functions so parent check can be avoided
     def from_scene_coords(self, x, y): return x, y
     def to_scene_coords(self, x, y): return x, y
+    def get_matrix(self): return cairo.Matrix()
 
     def clear(self):
         """Remove all sprites from scene"""
@@ -1707,35 +1760,23 @@ class Scene(gtk.DrawingArea):
 
         self.width, self.height = event.width, event.height
 
-    def all_sprites(self, sprites = None):
+    def all_visible_sprites(self):
         """Returns flat list of the sprite tree for simplified iteration"""
+        def all_recursive(sprites):
+            for sprite in sprites:
+                if sprite.visible:
+                    yield sprite
+                    if sprite.sprites:
+                        for child in all_recursive(sprite.sprites):
+                            yield child
 
-        if sprites is None:
-            sprites = self.sprites
-
-        for sprite in sprites:
-            yield sprite
-            if sprite.sprites:
-                for child in self.all_sprites(sprite.sprites):
-                    yield child
-
-    def all_visible_sprites(self, sprites = None):
-        """Returns flat list of just the visible sprites - avoid children whos
-        parents are not displayed"""
-        if sprites is None:
-            sprites = self.sprites
-
-        for sprite in sprites:
-            if sprite.visible:
-                yield sprite
-                if sprite.sprites:
-                    for child in self.all_visible_sprites(sprite.sprites):
-                        yield child
+        return all_recursive(self.sprites)
 
 
     def get_sprite_at_position(self, x, y):
         """Returns the topmost visible interactive sprite for given coordinates"""
         over = None
+
         for sprite in self.all_visible_sprites():
             if (sprite.interactive or sprite.draggable) and self.__check_hit(sprite, x, y):
                 over = sprite
