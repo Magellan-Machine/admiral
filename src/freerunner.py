@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Class for eay-interaction with the freerunner.
+Class for easy-interaction with the freerunner.
 '''
 
 __author__ = "Mac Ryan (mac@magellanmachine.se)"
