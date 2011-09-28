@@ -507,4 +507,9 @@ class CommandLine(object):
 
 
 if __name__ == '__main__':
+#    db = LogDataBase(LOG_DB_FNAME)
+#    xml = db.get_kml((1, 142))
+#    file = open("file.kml", 'w')
+#    file.write(xml)
+#    file.close()
     CommandLine()

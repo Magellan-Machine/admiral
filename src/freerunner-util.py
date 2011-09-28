@@ -12,6 +12,7 @@ __license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
 
 
 import gtk
+
 from freerunner import FreeRunner
 
 class FreeRunnerControlPanel(object):
@@ -32,17 +33,18 @@ class FreeRunnerControlPanel(object):
         self.pwr_toggle     = builder.get_object("pwr_toggle")
         self.usb_toggle     = builder.get_object("usb_toggle")
         self.op_in_progress = builder.get_object("op_in_progress")
-        self.connect_button = builder.get_object("connect")
         self.window         = builder.get_object("window")
 
         # Button extension and initialisation
         self.usb_toggle.fr_attribute = "usb_mode"
-        self.usb_toggle.alternatives = (('I am a DEVICE', 'device'), ('I am a HOST', 'host'))
+        self.usb_toggle.alternatives = (('I am a DEVICE', 'device'),
+                                        ('I am a HOST', 'host'))
         self.usb_toggle.set_active(self.fr.usb_mode.strip() == 'host')
         self.toggler(self.usb_toggle)
-        self.pwr_toggle.fr_attribute = "pwr_mode"
-        self.pwr_toggle.alternatives = (('I am GIVING energy to USB', 1), ('I am TAKING energy via USB', 0))
-        self.pwr_toggle.set_active(self.fr.pwr_mode.strip() == '0')
+        self.pwr_toggle.fr_attribute = "power_mode"
+        self.pwr_toggle.alternatives = (('I am GIVING energy to USB', 1),
+                                        ('I am TAKING energy via USB', 0))
+        self.pwr_toggle.set_active(self.fr.power_mode.strip() == '0')
         self.toggler(self.pwr_toggle)
 
         # Showtime!
@@ -79,17 +81,6 @@ class FreeRunnerControlPanel(object):
 
     def on_power_toggle_toggled(self, widget):
         self.toggler(widget)
-
-    def on_select_wifi_clicked(self, widget):
-        self.network_index = (self.network_index + 1) % len(self.fr.configured_networks)
-        network = self.fr.configured_networks[self.network_index]
-        widget.set_label("Connect to " + network +
-                         "\n(click to change)")
-        self.connect_button.set_sensitive(True)
-
-    def on_connect_clicked(self, widget):
-        self.fr.connect_to_network(self.fr.configured_networks[self.network_index])
-        widget.set_sensitive(False)
 
     def on_window_destroy(self, widget, data=None):
         gtk.main_quit()

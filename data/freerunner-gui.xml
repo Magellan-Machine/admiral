@@ -4,143 +4,24 @@
   <!-- interface-naming-policy project-wide -->
   <object class="GtkToggleAction" id="toggleaction1"/>
   <object class="GtkWindow" id="window">
+    <property name="can_focus">False</property>
     <child>
       <object class="GtkTable" id="table1">
         <property name="visible">True</property>
-        <property name="n_rows">5</property>
+        <property name="can_focus">False</property>
+        <property name="n_rows">4</property>
         <property name="n_columns">2</property>
         <property name="homogeneous">True</property>
         <child>
-          <object class="GtkToggleButton" id="log_data">
-            <property name="label" translatable="yes">LOG DATA</property>
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="receives_default">True</property>
-            <property name="focus_on_click">False</property>
-            <signal name="toggled" handler="on_log_data_toggled"/>
-          </object>
-          <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
-            <property name="top_attach">2</property>
-            <property name="bottom_attach">3</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkToggleButton" id="wireless_bridge">
-            <property name="label" translatable="yes">WIRELESS BRIDGE</property>
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="receives_default">True</property>
-            <property name="focus_on_click">False</property>
-            <signal name="toggled" handler="on_wireless_bridge_toggled"/>
-          </object>
-        </child>
-        <child>
-          <object class="GtkToggleButton" id="wireless_watchdog">
-            <property name="label" translatable="yes">WIRELESS WATCHDOG</property>
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="receives_default">True</property>
-            <property name="focus_on_click">False</property>
-            <signal name="toggled" handler="on_wireless_watchdog_toggled"/>
-          </object>
-          <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkToggleButton" id="use_accelerometer">
-            <property name="label" translatable="yes">USE FREERUNNER
-ACCELEROMETER</property>
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="receives_default">True</property>
-            <property name="focus_on_click">False</property>
-            <signal name="toggled" handler="on_use_accelerometer_toggled"/>
-          </object>
-          <packing>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkButton" id="quit_button">
-            <property name="label">gtk-quit</property>
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="receives_default">True</property>
-            <property name="use_stock">True</property>
-            <property name="focus_on_click">False</property>
-            <signal name="clicked" handler="on_window_destroy"/>
-          </object>
-          <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkToggleButton" id="run_button">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="receives_default">True</property>
-            <property name="focus_on_click">False</property>
-            <signal name="toggled" handler="on_run_button_toggled"/>
-            <child>
-              <object class="GtkImage" id="image1">
-                <property name="visible">True</property>
-                <property name="pixbuf">rose.gif</property>
-              </object>
-            </child>
-          </object>
-          <packing>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkToggleButton" id="use_gps">
-            <property name="label" translatable="yes">USE FREERUNNER
-GPS</property>
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="receives_default">True</property>
-            <property name="focus_on_click">False</property>
-            <signal name="toggled" handler="on_use_gps_toggled"/>
-          </object>
-          <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkToggleButton" id="battery_info">
-            <property name="label" translatable="yes">SEND BATTERY AND
-CURRENT INFORMATION</property>
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="receives_default">True</property>
-            <property name="focus_on_click">False</property>
-            <signal name="toggled" handler="on_battery_info_toggled"/>
-          </object>
-          <packing>
-            <property name="top_attach">2</property>
-            <property name="bottom_attach">3</property>
-          </packing>
-        </child>
-        <child>
           <object class="GtkFrame" id="frame1">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="label_xalign">0</property>
             <property name="shadow_type">none</property>
             <child>
               <object class="GtkDrawingArea" id="drawingarea">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
               </object>
             </child>
             <child type="label_item">
@@ -149,8 +30,71 @@ CURRENT INFORMATION</property>
           </object>
           <packing>
             <property name="right_attach">2</property>
-            <property name="top_attach">4</property>
-            <property name="bottom_attach">5</property>
+            <property name="top_attach">3</property>
+            <property name="bottom_attach">4</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToggleButton" id="run_button">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <property name="use_action_appearance">False</property>
+            <property name="focus_on_click">False</property>
+            <signal name="toggled" handler="on_run_button_toggled" swapped="no"/>
+            <child>
+              <object class="GtkImage" id="image1">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="pixbuf">rose.gif</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="quit_button">
+            <property name="label">gtk-quit</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <property name="use_action_appearance">False</property>
+            <property name="use_stock">True</property>
+            <property name="focus_on_click">False</property>
+            <signal name="clicked" handler="on_window_destroy" swapped="no"/>
+          </object>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="right_attach">2</property>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="gps_coords_label">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label" translatable="yes">&lt;big&gt;&lt;big&gt;&lt;big&gt;&lt;big&gt;&lt;big&gt;&lt;span foreground="red"&gt;No GPS fix&lt;/span&gt;&lt;/big&gt;&lt;/big&gt;&lt;/big&gt;&lt;/big&gt;&lt;/big&gt;</property>
+            <property name="use_markup">True</property>
+          </object>
+          <packing>
+            <property name="right_attach">2</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="log_size_label">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label" translatable="yes">&lt;big&gt;&lt;big&gt;&lt;big&gt;&lt;big&gt;&lt;big&gt;&lt;span foreground="red"&gt;Tracker is offline&lt;/span&gt;&lt;/big&gt;&lt;/big&gt;&lt;/big&gt;&lt;/big&gt;&lt;/big&gt;</property>
+            <property name="use_markup">True</property>
+          </object>
+          <packing>
+            <property name="right_attach">2</property>
           </packing>
         </child>
       </object>
