@@ -3,15 +3,19 @@
 Class for easy-interaction with the freerunner.
 '''
 
-__author__ = "Mac Ryan (mac@magellanmachine.se)"
-__created__ = "2010/09/25"
-__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
-__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
-
-
 import os
 import dbus
 import platform
+
+__author__ = "Mac Ryan"
+__copyright__ = "Copyright ©2011, Mac Ryan"
+#__credits__ = ["Name Lastname", "Name Lastname"]
+__license__ = "GPL v3"
+#__version__ = "<dev>"
+#__date__ = "<unknown>"
+__maintainer__ = "Mac Ryan"
+__email__ = "quasipedia@gmail.com"
+__status__ = "Development"
 
 
 class EnvironmentIsNotFreeRunnerError(RuntimeError):
