@@ -14,10 +14,15 @@ from arduino import Arduino
 from freerunner import FreeRunner
 from blackbox import blackbox as bbox
 
-__author__ = "Mac Ryan (mac@magellanmachine.se)"
-__created__ = "2010/09/28"
-__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
-__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
+__author__ = "Mac Ryan"
+__copyright__ = "Copyright ©2011, Mac Ryan"
+#__credits__ = ["Name Lastname", "Name Lastname"]
+__license__ = "GPL v3"
+#__version__ = "<dev>"
+#__date__ = "<unknown>"
+__maintainer__ = "Mac Ryan"
+__email__ = "quasipedia@gmail.com"
+__status__ = "Development"
 
 # LOCKSCREEN WIDGET
 LS_NOTCH_W = 80
@@ -112,7 +117,7 @@ class FreeRunnerControlPanel(object):
             if not boat_message:
                 return
             lat, lon = fix
-            msg = "H%.7f,V%.7f," % (lat, lon) + boat_message
+            msg = "Y%.7f,X%.7f," % (lat, lon) + boat_message
             bbox.log(msg)
             self.time_last_bbox_msg = time()
 

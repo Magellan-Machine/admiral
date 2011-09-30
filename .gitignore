@@ -1,7 +1,7 @@
 .*
 *.sh
 *.pyc
-*.log
+logs/*
 *.sqlite
 TODO.txt
 oldies*
