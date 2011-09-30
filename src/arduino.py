@@ -3,11 +3,6 @@
 Provide the logic interface to interact with the boat.
 '''
 
-__author__ = "Mac Ryan (mac@magellanmachine.se)"
-__created__ = "2010/09/28"
-__copyright__ = "Copyright (c) 2010 The Magellan Machinep"
-__license__ = "GPLv3 - http://www.gnu.org/licenses/gpl.html"
-
 import serial
 import random
 import logging
@@ -15,7 +10,16 @@ from time import time
 
 import gobject
 
-#LOGGER
+__author__ = "Mac Ryan"
+__copyright__ = "Copyright ©2011, Mac Ryan"
+#__credits__ = ["Name Lastname", "Name Lastname"]
+__license__ = "GPL v3"
+#__version__ = "<dev>"
+#__date__ = "<unknown>"
+__maintainer__ = "Mac Ryan"
+__email__ = "quasipedia@gmail.com"
+__status__ = "Development"
+
 log = logging.getLogger('general.arduino')
 
 
