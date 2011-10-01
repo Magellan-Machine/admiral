@@ -4,13 +4,15 @@ Provide the GUI elements for admiral.
 '''
 
 import logging
+import serial
+import termios
 from time import time
 
 import gtk, gobject  #@UnresolvedImport
 from lib import graphics
 from lib import pytweener as tween
 
-from arduino import Arduino
+from arduino import Arduino, MockSerial
 from freerunner import FreeRunner
 from blackbox import blackbox as bbox
 
@@ -47,6 +49,7 @@ class FreeRunnerControlPanel(object):
         self.builder.connect_signals(self)
         self.window = self.builder.get_object("window")
         self.gps_coords_label = self.builder.get_object('gps_coords_label')
+        self.serial_link_label = self.builder.get_object('serial_link_label')
         self.log_size_label = self.builder.get_object('log_size_label')
         # Collect all buttons in order to be able to gray them out later on
         self.all_buttons=[]
@@ -75,11 +78,18 @@ class FreeRunnerControlPanel(object):
         Executes callbacks if the program is in runmode.
         Runmode = Button on the GUI is pressed.
         '''
-        # ONLY IF TRACKING
-        if self.run_mode == True:
-            self._do_log()
-        else:
-            self.boat.flush()
+        try:
+            if self.run_mode == True:
+                self._do_log()
+            else:
+                self.boat.flush()
+        except (IOError, serial.SerialException,
+                serial.SerialTimeoutException, termios.error) as e:
+            msg = 'Serial connection lost. Falling back on mock serial. ' \
+                  'Exception: %s' % e
+            log.critical(msg)
+            self.boat.boat_is_connected = False
+            self.boat.serial = MockSerial()
         # ALWAYS RUN
         fix = self.freerunner.gps_fix
         if fix:
@@ -91,12 +101,21 @@ class FreeRunnerControlPanel(object):
         self.gps_coords_label.set_markup(self._to_markup(text, ok))
         # LOG entry counter
         if bbox.active:
-            msg = 'ID: %s\nLog size: %05d' % (bbox.active[0], bbox.lines)
+            text = 'ID: %s\nLog size: %05d' % (bbox.active[0], bbox.lines)
             ok = True
         else:
-            msg = 'Tracker is offline'
+            text = 'Tracker is offline'
             ok = False
-        self.log_size_label.set_markup(self._to_markup(msg, ok))
+        self.log_size_label.set_markup(self._to_markup(text, ok))
+        # SERIAL STATUS
+        if self.boat.boat_is_connected:
+            text = 'Serial link is UP'
+            ok = True
+        else:
+            text = 'Serial link is DOWN'
+            ok = False
+        self.serial_link_label.set_markup(self._to_markup(text, ok))
+
         # Force redraw (useful if MockSerial is hooked up to the gtk idle loop
         while gtk.events_pending():
             gtk.main_iteration()

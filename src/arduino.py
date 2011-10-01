@@ -113,10 +113,12 @@ class Arduino(object):
             log.debug('Initialisation of Arduino done in %s seconds' %
                       (time() - start))
             msg = 'An arduino has been found on USB0 - Connecting.'
+            self.boat_is_connected = True
             log.info(msg)
         except serial.SerialException:
             msg = 'Arduino not found - starting MOCK SERIAL communication!'
             log.info(msg)
+            self.boat_is_connected = False
             self.serial = MockSerial()
         self.last_message = ''
 
@@ -125,24 +127,16 @@ class Arduino(object):
         If available, retrieve a message from the Arduino. Messages are strings
         ended by a carriage return (ascii decimal 13) and a newline.
         '''
-        try:
-            # Early exit if no message is waiting
-            log.debug('Going to read a serial line.')
-            while self.serial.inWaiting():
-                # Discards old data by consuming till the last line of buffer
-                msg = self.serial.readline().strip()
-            log.debug('Serial line read: %s' % msg)
-            if msg:
-                self.last_message = msg
-                return msg
-            return None
-        except (IOError, serial.SerialException,
-                serial.SerialTimeoutException) as e:
-            msg = 'Serial connection lost. Falling back on mock serial. ' \
-                  'Exception: %s' % e
-            log.critical(msg)
-            self.serial = MockSerial()
-            return None
+        # Early exit if no message is waiting
+        log.debug('Going to read a serial line.')
+        while self.serial.inWaiting():
+            # Discards old data by consuming till the last line of buffer
+            msg = self.serial.readline().strip()
+        log.debug('Serial line read: %s' % msg)
+        if msg:
+            self.last_message = msg
+            return msg
+        return None
 
     def flush(self):
         '''
