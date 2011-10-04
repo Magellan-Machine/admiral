@@ -129,6 +129,17 @@ class FreeRunner(object):
             return None
         return lat, lon
 
+    @property
+    def gps_hdop(self):
+        '''
+        Return the GPS HDOP (horizontal diluition of precision).
+        '''
+        if not self.gps_status:
+            return None
+        accuracy_data = self.__dbus_gps.GetAccuracy()
+        (bitmask, pdop, hdop, vdop, udata) = accuracy_data  #@UnusedVariable
+        return hdop.real
+
     def _handle_property_on_file(self, mode, file, value=None):
         '''
         Some of the FreeRunner functionalities accept input or output through

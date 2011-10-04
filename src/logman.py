@@ -8,12 +8,15 @@ MagellanMachine database. It also doubles as a standalone application, allowing
 to create keywhole files to be viewed with google Earth and others.
 '''
 
+import itertools as itools
 import re
+import copy
 import os.path
 import time
-from datetime import timedelta
 import textwrap
 import zipfile
+from math import ceil
+from datetime import timedelta
 from calendar import timegm
 
 import matplotlib.pyplot as plt
@@ -68,22 +71,6 @@ class RawLog(list):
         self.log_start_time = timegm(time.strptime(t_bit, '%Y-%m-%d@%Hh%M'))
         self.__load_raw_file(fname)
 
-    def __load_raw_file(self, fname):
-        '''
-        Load the raw data into self (each line on the log becomes an element
-        of the list represented by the RawLog object).
-        '''
-        start = self.log_start_time
-        for line in open(fname):
-            fields = line.strip().split(',')
-            record = dict([(f[0], f[1:]) for f in fields[1:]])
-            record['timestamp'] = start + int(fields[0]) / 1000.0
-            # FIXME: Just a quick fix waiting to decide with the team how to
-            #        handle log data...
-            record['X'] = float(record['X'])
-            record['Y'] = float(record['Y'])
-            self.append(record)
-
     def plot(self):
         '''
         Draw a basic analysis of the log.
@@ -93,8 +80,7 @@ class RawLog(list):
         # SPEED
         plt.subplot(2, 2, 1)
         plt.ylabel('speed [m/s]')
-        func = lambda x, y : geolib.orthodromic_dist(x, y) \
-                             / (y['timestamp'] - x['timestamp'])
+        func = lambda x, y : geolib.orthodromic_speed(x, y)
         plt.plot(map(func, self[:-1], self[1:]), color='red')
         plt.grid(True)
         # DISTANCE FROM ORIGIN
@@ -106,14 +92,24 @@ class RawLog(list):
         plt.xlabel('record serial number')
         # PATTERN SKETCH
         plt.subplot(1, 2, 2)
-        plt.xlabel('approximate representation')
-        x_es = [el['X'] for el in self]
-        y_es = [el['Y'] for el in self]
-        plt.plot(x_es, y_es, color='green', marker='o', markersize=3)
-        frame1 = plt.gca()
-        frame1.axes.get_xaxis().set_ticks([])
-        frame1.axes.get_yaxis().set_ticks([])
+        self._plot_sketch(self, 'Approximate representation')
         plt.show()
+
+    def plot_stints(self, stints):
+        '''
+        Plot different stings in a side-by-side comparison.
+        '''
+        # Establish the grid matrix
+        plt.figure()
+        len_ = len(stints)
+        col_n = ceil(len_**0.5)
+        row_n = ceil(float(len_)/col_n)
+        for i, stint in enumerate(stints):
+            plt.subplot(col_n, row_n, i+1)
+            start, stop = stint
+            self._plot_sketch(self[start:stop], 'records %s to %s' % stint)
+        plt.show()
+
 
     def strip(self, mov_threshold=5, rewind_time=5):
         '''
@@ -154,6 +150,67 @@ class RawLog(list):
         ops['lingering_end'] = i
         return ops
 
+    def stints(self, radius, min_time):
+        '''
+        Split the log into distinct stints, where each stint is opened / closed
+        by a period of at least ``min_time`` seconds in which the boat didn't
+        move of more than ``min_range`` metres.
+        '''
+        dtime = lambda a, b: abs(a['timestamp'] - b['timestamp'])
+        test_linger = lambda pool: self._get_min_circle_radius(pool) <= radius
+        start = 0
+        stop = 0
+        lingering = [start]
+        while True:
+            print "%.2f" % (float((start + (stop-start) / 2)) / len(self)*100)
+            if stop < len(self) and dtime(self[start], self[stop]) < min_time:
+                stop += 1
+                continue
+            if start <= stop and not test_linger(self[start:stop]):
+                start += 1
+                continue
+            # By now we must be in a lingering segment, so we can keep on
+            # expanding it until the boat begins to move.
+            print start, stop, len(self)
+            while stop < len(self) and test_linger(self[start:stop]):
+                stop += 1
+            lingering.extend((start, stop))
+            start = stop+1
+            stop = start
+            print start, stop, len(self)
+            if start == stop == len(self) + 1:
+                break
+        return zip(*[lingering[i::2] for i in range(2)])
+
+    def filter_gps_wrong(self, max_speed, max_len_wrong_series):
+        '''
+        Eliminate all records that appear to be due to wrong GPS readings.
+
+        This is heuristically estimated by finding all records whose data would
+        lead to a speed beyond the one given as argument. An "high speed
+        record" is only discarded if speed would return withing the parameters
+        within the next ``max_len_wrong_series`` records from the last good
+        one.
+        '''
+        assert len(self) > 3
+        sp = geolib.orthodromic_speed
+        # Test function: speed from last good point is OK?
+        test_ok = lambda x : sp(data[-1], self[x]) <= max_speed
+        data = [self[0]]
+        i = 1
+        while i < len(self):
+            for j in range(max_len_wrong_series):
+                if test_ok(i+j):
+                    i += j  #advance to the first good element after bad ones
+                    break
+            else:
+                i += 1  #advance to the following element regardless
+            data.append(self[i])
+            i += 1
+        ops = {'removed_records': len(self) - len(data)}
+        self[:] = data
+        return ops
+
     def filter_gps_locked(self):
         '''
         Eliminates all records in which the GPS has subsequent equal fixes.
@@ -163,12 +220,11 @@ class RawLog(list):
         '''
         data = []
         fix = lambda r: (r['X'], r['Y'])
-        test = lambda i: len(set([fix(self[c]) for c in range(i-1, i+2)])) == 3
-        self.insert(0, dict(X=None, Y=None))
-        self.append(dict(X=None, Y=None))
-        for i in range(1, len(self)-1):
-            if test(i):
-                data.append(self[i])
+        # See http://stackoverflow.com/q/7641955/146792
+        for key, group in itools.groupby(self, key=fix):
+            first = next(group)
+            if (first or True) and next(group, None) is None:
+                data.append(first)
         ops = {'removed_records': len(self) - len(data)}
         self[:] = data
         return ops
@@ -177,7 +233,7 @@ class RawLog(list):
         '''
         Selectively remove log entries in order to obtain a log in which each
         entry has a distance from the previous one of at least ``step_lenght``
-        metres [the last entry of self is always kept, regardless].
+        metres.
 
         Return data about the performed filtering in the form of a dictionary.
         '''
@@ -185,7 +241,6 @@ class RawLog(list):
         for i in range(1, len(self)):
             if geolib.orthodromic_dist(data[-1], self[i]) > step_lenght:
                 data.append(self[i])
-        data.append(self[-1])
         ops = {'removed_records': len(self) - len(data)}
         self[:] = data
         return ops
@@ -217,6 +272,23 @@ class RawLog(list):
         stats['counter_records'] = len(self)
         return stats
 
+    def dump(self, fname):
+        '''
+        Dump the content of the log to a new file.
+        '''
+        lines = []
+        for record in self:
+            reverse_delta = record['timestamp'] - self.log_start_time
+            bits = [str(int(round(reverse_delta * 1000, 0))).zfill(9)]
+            for k in sorted(record):
+                if k != 'timestamp':
+                    bits.append(''.join((k, str(record[k]))))
+            bits = ','.join(bits)
+            lines.append(''.join([bits, '\n']))
+        f = open(fname, 'w')
+        f.writelines(lines)
+        f.close()
+
     def _get_movement_start_index(self, data, threshold, rewind_time):
         '''
         Return the index of the first element in ``data`` that is part of a
@@ -237,22 +309,44 @@ class RawLog(list):
                 return i
         return None
 
-    def dump(self, fname):
+    def _get_min_circle_radius(self, pool):
         '''
-        Dump the content of the log to a new file.
+        Return the radius of the minimum encompassing circle.
+        See: http://mathworld.wolfram.com/JungsTheorem.html
         '''
-        lines = []
-        for record in self:
-            reverse_delta = record['timestamp'] - self.log_start_time
-            bits = [str(int(round(reverse_delta * 1000, 0))).zfill(9)]
-            for k in sorted(record):
-                if k != 'timestamp':
-                    bits.append(''.join((k, str(record[k]))))
-            bits = ','.join(bits)
-            lines.append(''.join([bits, '\n']))
-        f = open(fname, 'w')
-        f.writelines(lines)
-        f.close()
+        pairs = itools.combinations(pool, 2)
+        dist = geolib.orthodromic_dist
+        return max([dist(*pair) for pair in pairs]) / 3**0.5
+
+    def _plot_sketch(self, data, title):
+        '''
+        Draw an approximate representation of the log pattern on surface.
+        '''
+        plt.xlabel(title)
+        x_es = [el['X'] for el in data]
+        y_es = [el['Y'] for el in data]
+        plt.plot(x_es, y_es, color='green', marker='o', markersize=3)
+        frame1 = plt.gca()
+        frame1.axes.get_xaxis().set_ticks([])
+        frame1.axes.get_yaxis().set_ticks([])
+
+
+    def __load_raw_file(self, fname):
+        '''
+        Load the raw data into self (each line on the log becomes an element
+        of the list represented by the RawLog object).
+        '''
+        start = self.log_start_time
+        for line in open(fname):
+            fields = line.strip().split(',')
+            record = dict([(f[0], f[1:]) for f in fields[1:]])
+            record['timestamp'] = start + int(fields[0]) / 1000.0
+            # FIXME: Just a quick fix waiting to decide with the team how to
+            #        handle log data...
+            record['X'] = float(record['X'])
+            record['Y'] = float(record['Y'])
+            self.append(record)
+
 
 class CommandLine(object):
 
@@ -270,13 +364,14 @@ class CommandLine(object):
         - ``stats``: print statistics about the log
         - ``plot``: show math plotting of the log
         - ``filter``: filter the log
+        - ``stints``: split the log in separate navigation stints
         - ``export``: export to a kml or kmz file
         '''
         # CREATE MAIN PARSER
         parser = argparse.ArgumentParser(
             description='''Utility for processing logs generated by the
                            MagellanMachine project.''',
-            epilog='''Try "logman XXX <command> -h" for specific help on
+            epilog='''Try "logman <command> -h" for specific help on
                       individual commands.''')
         common_parent_parser = argparse.ArgumentParser(add_help=False)
         common_parent_parser.add_argument('infile',
@@ -343,7 +438,6 @@ class CommandLine(object):
         parser_filter.add_argument('-n', '--no-lost-gps',
                                    action='store_true',
                                    help=help_msg)
-        parser_filter.set_defaults(func=self._filter)
         help_msg = textwrap.dedent('''Selectively discards log records in order
             to obtain a log in which each record is separated by the previous
             and following ones by at least N metres.''')
@@ -351,7 +445,36 @@ class CommandLine(object):
                                    metavar='N',
                                    type=int,
                                    help=help_msg)
+        help_msg = textwrap.dedent('''Selectively discards log records that
+        would imply unrealistic speeds.
+          MAXSPEED indicates the maximum realistic speed.
+          MAXSERIES indicates the maximum number of consecutive records that
+        can be discarded before the filter will accept them even if they are
+        above MAXSPEED.
+          The first record in a log is always considered to be eccurate.''')
+        parser_filter.add_argument('-w', '--no-wrong-gps',
+                                   nargs=2,
+                                   default=[],
+                                   type=int,
+                                   metavar=('MAXSPEED', 'MAXSERIES'),
+                                   help=help_msg)
         parser_filter.set_defaults(func=self._filter)
+
+        #STINTS COMMAND
+        parser_stints = subparsers.add_parser('stints',
+                      help='Split the log in separate navigation stints',
+                      parents=[common_parent_parser])
+        parser_stints.add_argument('radius',
+                    type=int,
+                    metavar='<RADIUS>',
+                    help='Tolerance radius for considering the boat still [in'
+                         'metres]')
+        parser_stints.add_argument('mintime',
+                    type=int,
+                    metavar='<MINTIME>',
+                    help='Minimum amount of time the boat must be in radius '
+                         'to be considered still [in seconds].')
+        parser_stints.set_defaults(func=self._stints)
 
         #EXPORT COMMAND
         parser_export = subparsers.add_parser('export',
@@ -385,11 +508,29 @@ class CommandLine(object):
             log[:] = log[first-1:]
         return log
 
-    def _filter(self, log, strip, no_lost_gps, regular_steps, action):
+    def _stints(self, log, radius, mintime):
+        '''
+        Create stints
+        '''
+        stints = log.stints(radius, mintime)
+        for start, stop in stints:
+            fname = log.fname + '.[%s-%s]' % (start, stop)
+            tmp = copy.deepcopy(log)
+            tmp[:] = tmp[start:stop]
+            tmp.dump(fname)
+        log.plot_stints(stints)
+
+    def _filter(self, log, strip, no_lost_gps, no_wrong_gps, regular_steps,
+                action):
+        '''
+        Filter the log.
+        '''
         if strip:
             log.strip(*strip)
         if no_lost_gps:
             log.filter_gps_locked()
+        if no_wrong_gps:
+            log.filter_gps_wrong(*no_wrong_gps)
         if regular_steps:
             log.filter_minimum_step_length(regular_steps)
         if action == 'PLOT':

@@ -22,6 +22,12 @@ EARTH_RADIUS = 6371   # in kilometres
 NAUTICAL_MILE = 1852  # in metres
 KNOT = 1.943844       # in metres/second
 
+class SameRecordError(StandardError):
+    '''
+    Exception class raised when some function that is supposed to operate on
+    two distinct points is called on the same one.
+    '''
+
 def orthodromic_dist(point_a, point_b):
     '''
     Calculate the orthodromic distance between two GPS readings.
@@ -51,6 +57,17 @@ def orthodromic_dist(point_a, point_b):
         * math.sin(d_lon/2.0)**2
     c = 2 * math.asin(math.sqrt(a))
     return EARTH_RADIUS * c * 1000
+
+def orthodromic_speed(point_a, point_b):
+    '''
+    Return the speed between the boat had between ``point_a`` and ``point_b``,
+    which needs to be log records (dictionaries).
+    '''
+    if point_a == point_b:
+        raise SameRecordError
+    dist = orthodromic_dist(point_a, point_b)
+    time = abs(point_b['timestamp'] - point_a['timestamp'])
+    return dist/time
 
 def get_kml(records):
     '''
