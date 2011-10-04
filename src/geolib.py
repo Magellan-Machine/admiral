@@ -97,15 +97,22 @@ def get_kml(records):
         # Individual records
         tmp = factory.CreatePlacemark()
         tmp.set_name("#" + str(counter))
-        msg_lines = []
-        msg_lines.append('Rudder PWM: ' + str(record['R']))
-        msg_lines.append('Sail PWM: ' + str(record['S']))
+        est_speed = 0
         if prev:
             m = orthodromic_dist(prev, record)
             ms = record['timestamp'] - prev['timestamp']
-            speed = m / ms
-            msg_lines.append('Speed (cm/s): ' + str(int(speed * 100)))
-            msg_lines.append('Speed (km/h): ' + str('%.2f' % (speed * 3.6)))
+            est_speed = m / ms
+        msg_lines = []
+        msg_lines.append('HDOP: ' + str(record['D']))
+        msg_lines.append('GPS heading: ' + str(record['H']))
+        msg_lines.append('GPS speed (cm/s): ' + str(int(record['F'] * 100)))
+        msg_lines.append('GPS speed (km/h): ' + str(int(record['F'] * 3.6)))
+        msg_lines.append('Estimated speed (cm/s): ' +
+                         str(int(est_speed * 100)))
+        msg_lines.append('Estimated speed(km/h): ' +
+                         str('%.2f' % (est_speed * 3.6)))
+        msg_lines.append('Sail PWM: ' + str(record['S']))
+        msg_lines.append('Rudder PWM: ' + str(record['R']))
         tmp.set_description('\n'.join(msg_lines))
         point = factory.CreatePoint()
         pcoord = factory.CreateCoordinates()

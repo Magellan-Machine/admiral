@@ -89,7 +89,6 @@ class RawLog(list):
         func = lambda x : geolib.orthodromic_dist(self[0], x)
         plt.plot(map(func, self))
         plt.grid(True)
-        plt.xlabel('record serial number')
         # HDOP
         plt.subplot(3, 2, 5)
         plt.ylabel('HDOP')
