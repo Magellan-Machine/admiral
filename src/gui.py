@@ -135,9 +135,12 @@ class FreeRunnerControlPanel(object):
             boat_message = self.boat.poll_message() or self.boat.last_message
             if not boat_message:
                 return
-            lat, lon = fix
-            msg = "Y%.7f,X%.7f," % (lat, lon) + boat_message
-            bbox.log(msg)
+            bits = []
+            bits.append("Y%.7f,X%.7f" % fix)  #lat, lon
+            bits.append("D%.2f" % self.freerunner.gps_hdop)  #HDOP
+            bits.append("H%.2f,F%.2f" % self.freerunner.gps_moving) #head,speed
+            bits.append(boat_message)
+            bbox.log(','.join(bits))
             self.time_last_bbox_msg = time()
 
     def _to_markup(self, text, status):

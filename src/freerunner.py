@@ -43,9 +43,15 @@ class FreeRunner(object):
     __dbus_usage = dbus.Interface(__bus.get_object(
         'org.freesmartphone.ousaged', '/org/freesmartphone/Usage'),
         'org.freesmartphone.Usage')
-    __dbus_gps = dbus.Interface(__bus.get_object(
+    __dbus_gpsposition = dbus.Interface(__bus.get_object(
         'org.freesmartphone.ogpsd', '/org/freedesktop/Gypsy'),
         'org.freedesktop.Gypsy.Position')
+    __dbus_gpsaccuracy = dbus.Interface(__bus.get_object(
+        'org.freesmartphone.ogpsd', '/org/freedesktop/Gypsy'),
+        'org.freedesktop.Gypsy.Accuracy')
+    __dbus_gpscourse = dbus.Interface(__bus.get_object(
+        'org.freesmartphone.ogpsd', '/org/freedesktop/Gypsy'),
+        'org.freedesktop.Gypsy.Course')
     __property_files = dict(
         usb_mode='/sys/devices/platform/s3c-ohci/usb_mode',
         power_mode='/sys/class/i2c-adapter/i2c-0/0-0073/'
@@ -122,7 +128,7 @@ class FreeRunner(object):
         '''
         if not self.gps_status:
             return None
-        pos_data = self.__dbus_gps.GetPosition()
+        pos_data = self.__dbus_gpsposition.GetPosition()
         (bitmask, epoch, lat, lon, alt) = pos_data  #@UnusedVariable
         lat, lon = lat.real, lon.real  #convert from dbus object to floats
         if (lon, lat) == (0, 0):
@@ -136,9 +142,20 @@ class FreeRunner(object):
         '''
         if not self.gps_status:
             return None
-        accuracy_data = self.__dbus_gps.GetAccuracy()
-        (bitmask, pdop, hdop, vdop, udata) = accuracy_data  #@UnusedVariable
+        accuracy_data = self.__dbus_gpsaccuracy.GetAccuracy()
+        (bitmask, pdop, hdop, vdop) = accuracy_data  #@UnusedVariable
         return hdop.real
+
+    @property
+    def gps_moving(self):
+        '''
+        Return heading and speed.
+        '''
+        if not self.gps_status:
+            return None
+        course_data = self.__dbus_gpscourse.GetCourse()
+        (bitmask, tstamp, speed, heading, climb) = course_data #@UnusedVariable
+        return heading.real, speed.real * 0.514444444  #convert kt --> ms
 
     def _handle_property_on_file(self, mode, file, value=None):
         '''

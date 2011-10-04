@@ -78,16 +78,22 @@ class RawLog(list):
         '''
         plt.figure()
         # SPEED
-        plt.subplot(2, 2, 1)
+        plt.subplot(3, 2, 1)
         plt.ylabel('speed [m/s]')
         func = lambda x, y : geolib.orthodromic_speed(x, y)
         plt.plot(map(func, self[:-1], self[1:]), color='red')
         plt.grid(True)
         # DISTANCE FROM ORIGIN
-        plt.subplot(2, 2, 3)
+        plt.subplot(3, 2, 3)
         plt.ylabel('distance from origin [m]')
         func = lambda x : geolib.orthodromic_dist(self[0], x)
         plt.plot(map(func, self))
+        plt.grid(True)
+        plt.xlabel('record serial number')
+        # HDOP
+        plt.subplot(3, 2, 5)
+        plt.ylabel('HDOP')
+        plt.plot([record['D'] for record in self])
         plt.grid(True)
         plt.xlabel('record serial number')
         # PATTERN SKETCH
@@ -182,49 +188,11 @@ class RawLog(list):
                 break
         return zip(*[lingering[i::2] for i in range(2)])
 
-    def filter_gps_wrong(self, max_speed, max_len_wrong_series):
+    def filter_by_HDOP(self, threshold):
         '''
-        Eliminate all records that appear to be due to wrong GPS readings.
-
-        This is heuristically estimated by finding all records whose data would
-        lead to a speed beyond the one given as argument. An "high speed
-        record" is only discarded if speed would return withing the parameters
-        within the next ``max_len_wrong_series`` records from the last good
-        one.
+        Eliminate all records whose DOP is over the threshold
         '''
-        assert len(self) > 3
-        sp = geolib.orthodromic_speed
-        # Test function: speed from last good point is OK?
-        test_ok = lambda x : sp(data[-1], self[x]) <= max_speed
-        data = [self[0]]
-        i = 1
-        while i < len(self):
-            for j in range(max_len_wrong_series):
-                if test_ok(i+j):
-                    i += j  #advance to the first good element after bad ones
-                    break
-            else:
-                i += 1  #advance to the following element regardless
-            data.append(self[i])
-            i += 1
-        ops = {'removed_records': len(self) - len(data)}
-        self[:] = data
-        return ops
-
-    def filter_gps_locked(self):
-        '''
-        Eliminates all records in which the GPS has subsequent equal fixes.
-        (This is normally a sign that the fix has been lost).
-
-        Return data about the performed filtering in the form of a dictionary.
-        '''
-        data = []
-        fix = lambda r: (r['X'], r['Y'])
-        # See http://stackoverflow.com/q/7641955/146792
-        for key, group in itools.groupby(self, key=fix):
-            first = next(group)
-            if (first or True) and next(group, None) is None:
-                data.append(first)
+        data = [r for r in self if r['D'] <= threshold]
         ops = {'removed_records': len(self) - len(data)}
         self[:] = data
         return ops
@@ -336,15 +304,21 @@ class RawLog(list):
         Load the raw data into self (each line on the log becomes an element
         of the list represented by the RawLog object).
         '''
+        real = re.compile(r'^\d+\.\d+$')
+        integer = re.compile(r'^\d+$')
         start = self.log_start_time
         for line in open(fname):
             fields = line.strip().split(',')
             record = dict([(f[0], f[1:]) for f in fields[1:]])
-            record['timestamp'] = start + int(fields[0]) / 1000.0
             # FIXME: Just a quick fix waiting to decide with the team how to
             #        handle log data...
-            record['X'] = float(record['X'])
-            record['Y'] = float(record['Y'])
+            for k, v in record.items():
+                if real.match(v):
+                    record[k] = float(v)
+                elif integer.match(v):
+                    record[k] = int(v)
+                # (the rest are strings)
+            record['timestamp'] = start + int(fields[0]) / 1000.0
             self.append(record)
 
 
@@ -432,11 +406,11 @@ class CommandLine(object):
                                    type=int,
                                    metavar=('MINMOV', 'REWIND'),
                                    help=help_msg)
-        help_msg = textwrap.dedent('''Eliminates those series of contiguous
-            records with exactly the same GPS fixes (this is normally a sign
-            that the GPS itself has lost the fix).''')
-        parser_filter.add_argument('-n', '--no-lost-gps',
-                                   action='store_true',
+        help_msg = textwrap.dedent('''Eliminates those records whose HDOP is
+            above a given threshold.''')
+        parser_filter.add_argument('-p', '--precision',
+                                   type=float,
+                                   metavar='MAX_HDOP',
                                    help=help_msg)
         help_msg = textwrap.dedent('''Selectively discards log records in order
             to obtain a log in which each record is separated by the previous
@@ -444,19 +418,6 @@ class CommandLine(object):
         parser_filter.add_argument('-r', '--regular-steps',
                                    metavar='N',
                                    type=int,
-                                   help=help_msg)
-        help_msg = textwrap.dedent('''Selectively discards log records that
-        would imply unrealistic speeds.
-          MAXSPEED indicates the maximum realistic speed.
-          MAXSERIES indicates the maximum number of consecutive records that
-        can be discarded before the filter will accept them even if they are
-        above MAXSPEED.
-          The first record in a log is always considered to be eccurate.''')
-        parser_filter.add_argument('-w', '--no-wrong-gps',
-                                   nargs=2,
-                                   default=[],
-                                   type=int,
-                                   metavar=('MAXSPEED', 'MAXSERIES'),
                                    help=help_msg)
         parser_filter.set_defaults(func=self._filter)
 
@@ -520,17 +481,19 @@ class CommandLine(object):
             tmp.dump(fname)
         log.plot_stints(stints)
 
-    def _filter(self, log, strip, no_lost_gps, no_wrong_gps, regular_steps,
-                action):
+    def _filter(self, log, strip, precision, regular_steps, action):
         '''
         Filter the log.
+
+        The filtering order is:
+        - by HDOP
+        - stripping
+        - regualar steps
         '''
+        if precision:
+            log.filter_by_HDOP(precision)
         if strip:
             log.strip(*strip)
-        if no_lost_gps:
-            log.filter_gps_locked()
-        if no_wrong_gps:
-            log.filter_gps_wrong(*no_wrong_gps)
         if regular_steps:
             log.filter_minimum_step_length(regular_steps)
         if action == 'PLOT':
